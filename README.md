@@ -2,6 +2,10 @@
 
 This repository provides the baseline system for **Language-based Audio Retrieval** (Task 6B) in DCASE 2023 Challenge.
 
+**2023/03/20 Update:**
+Training checkpoints for the baseline system and its audio encoder are available on Zenodo:
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7752975.svg)](https://doi.org/10.5281/zenodo.7752975).
+
 ![Language-based Audio Retrieval](figs/dcase2023_task_6b.png)
 
 # Baseline Retrieval System
@@ -73,4 +77,15 @@ main.py                         # main()
 postprocessing
 ├─ xmodal_scores.py             # calculate audio-text scores
 └─ xmodal_retrieval.py          # calculate mAP, R@1, R@5, R@10, etc.
+```
+
+# Examples
+
+1. Code example for using the pretrained audio encoder:
+
+```
+example
+├─ audio_encoder.py             # code example for audio encoder
+├─ example.wav                  # audio segment example
+└─ audio_encoder.pth            # audio encoder checkpoint (https://doi.org/10.5281/zenodo.7752975)
 ```
