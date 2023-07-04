@@ -31,9 +31,9 @@ print("Load", conf_fpath)
 
 # Load data
 data_conf = conf["data_conf"]
-train_ds = data_utils.load_data(data_conf["train_data"])
-val_ds = data_utils.load_data(data_conf["val_data"])
-eval_ds = data_utils.load_data(data_conf["eval_data"])
+train_ds = data_utils.load_data(data_conf["train_data"], train=False)
+val_ds = data_utils.load_data(data_conf["val_data"], train=False)
+eval_ds = data_utils.load_data(data_conf["eval_data"], train=False)
 
 # Restore model checkpoint
 param_conf = conf["param_conf"]

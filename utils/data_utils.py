@@ -94,7 +94,7 @@ def padding(tensors, dtype=torch.float):
     return padded_tensors.to(dtype)
 
 
-def load_data(conf):
+def load_data(conf, train=True):
     # Load audio data
     audio_fpath = os.path.join(conf["dataset"], conf["audio_data"])
     audio_data = h5py.File(audio_fpath, "r")
@@ -104,6 +104,10 @@ def load_data(conf):
     text_fpath = os.path.join(conf["dataset"], conf["text_data"])
     text_data = pd.read_csv(text_fpath, converters={"tokens": literal_eval})
     print("Load", text_fpath)
+
+    # Bootstrap pairs
+    if train:
+        text_data = text_data.groupby(by=["fid"]).sample(n=1, replace=False, random_state=None).reset_index()
 
     # Load prior embeddings (e.g., word2vec, BERT, and RoBERTa)
     embed_fpath = os.path.join(conf["dataset"], conf["text_embeds"])

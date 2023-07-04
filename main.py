@@ -31,10 +31,6 @@ def exec_trial(conf, ckp_dir=None):
     val_dl = DataLoader(dataset=val_ds, batch_size=param_conf["batch_size"],
                         shuffle=True, collate_fn=data_utils.collate_fn)
 
-    eval_ds = data_utils.load_data(data_conf["eval_data"])
-    eval_dl = DataLoader(dataset=eval_ds, batch_size=param_conf["batch_size"],
-                         shuffle=True, collate_fn=data_utils.collate_fn)
-
     model_params = conf[param_conf["model"]]
     model = model_utils.init_model(model_params, train_ds.text_vocab)
     print(model)
@@ -63,7 +59,6 @@ def exec_trial(conf, ckp_dir=None):
         epoch_results = {}
         epoch_results["train_obj"] = model_utils.eval(model, train_dl, objective)
         epoch_results["val_obj"] = model_utils.eval(model, val_dl, objective)
-        epoch_results["eval_obj"] = model_utils.eval(model, eval_dl, objective)
 
         epoch_results["stop_metric"] = epoch_results["val_obj"]
 
@@ -78,6 +73,15 @@ def exec_trial(conf, ckp_dir=None):
         # Send the current statistics back to the Ray cluster
         tune.report(**epoch_results)
 
+        # Reload data (Pair Bootstrapping)
+        train_ds = data_utils.load_data(data_conf["train_data"])
+        train_dl = DataLoader(dataset=train_ds, batch_size=param_conf["batch_size"],
+                              shuffle=True, collate_fn=data_utils.collate_fn)
+
+        val_ds = data_utils.load_data(data_conf["val_data"])
+        val_dl = DataLoader(dataset=val_ds, batch_size=param_conf["batch_size"],
+                            shuffle=True, collate_fn=data_utils.collate_fn)
+
 
 # Main
 if __name__ == "__main__":
@@ -91,7 +95,7 @@ if __name__ == "__main__":
     trial_stopper = getattr(tune.stopper, ray_conf["trial_stopper"], TrialPlateauStopper)(**ray_conf["stopper_args"])
     trial_reporter = CLIReporter(max_report_frequency=60, print_intermediate_tables=True)
 
-    for metric in ["train_obj", "val_obj", "eval_obj", "stop_metric"]:
+    for metric in ["train_obj", "val_obj", "stop_metric"]:
         trial_reporter.add_metric_column(metric=metric)
 
 
@@ -114,7 +118,7 @@ if __name__ == "__main__":
         resources_per_trial={"cpu": 1, "gpu": 1},
         num_samples=1,
         local_dir=conf["trial_base"],
-        keep_checkpoints_num=5,
+        keep_checkpoints_num=3,
         checkpoint_score_attr="min-stop_metric",
         verbose=1,
         progress_reporter=trial_reporter,
