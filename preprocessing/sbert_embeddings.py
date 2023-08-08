@@ -22,8 +22,8 @@ for split in global_params["audio_splits"]:
     text_data = pd.read_csv(text_fpath)
 
     for i in text_data.index:
-        tid = text_data.iloc[i].tid
-        raw_text = text_data.iloc[i].raw_text
+        tid = text_data.loc[i].tid
+        raw_text = text_data.loc[i].raw_text
 
         print(split, tid, raw_text)
 

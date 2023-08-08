@@ -48,7 +48,7 @@ model.eval()
 for name, ds in zip(["train", "val", "eval"], [train_ds, val_ds, eval_ds]):
     text2vec = {}
     for idx in ds.text_data.index:
-        item = ds.text_data.iloc[idx]
+        item = ds.text_data.loc[idx]
 
         if ds.text_level == "word":
             text_vec = torch.as_tensor([ds.text_vocab(key) for key in item["tokens"] if key not in stopwords])
