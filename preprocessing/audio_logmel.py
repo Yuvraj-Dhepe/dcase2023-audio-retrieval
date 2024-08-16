@@ -1,11 +1,10 @@
 import glob
 import os
 import pickle
-
 import h5py
 import librosa
 import numpy as np
-
+from multiprocessing import Pool
 
 def log_mel_spectrogram(y,
                         sample_rate=44100,
@@ -34,11 +33,18 @@ def log_mel_spectrogram(y,
 
     return np.log(mel_spectrogram + log_offset)
 
+def process_audio(fpath):
+    fname = os.path.basename(fpath)
+    fid = fname2fid[fname]
 
-# %%
+    y, sr = librosa.load(fpath, sr=None, mono=True)
+    log_mel = log_mel_spectrogram(y, sr, window_length_secs=0.040, hop_length_secs=0.020,
+                                  num_mels=64, log_offset=np.spacing(1))
+
+    return fid, np.vstack(log_mel).transpose()    
 
 global_params = {
-    "dataset_dir": "~/Clotho",
+    "dataset_dir": "./data/Clotho",
     "audio_splits": ["development", "validation", "evaluation"]
 }
 
@@ -58,18 +64,10 @@ for split in global_params["audio_splits"]:
 
     with h5py.File(audio_logmel, "w") as stream:
 
-        for fpath in glob.glob(r"{}/*.wav".format(audio_dir)):
-            try:
-                fname = os.path.basename(fpath)
-                fid = fname2fid[fname]
-
-                y, sr = librosa.load(fpath, sr=None, mono=True)
-                log_mel = log_mel_spectrogram(y=y, sample_rate=sr, window_length_secs=0.040, hop_length_secs=0.020,
-                                              num_mels=64, log_offset=np.spacing(1))
-
-                stream[fid] = np.vstack(log_mel).transpose()  # [Time, Mel]
-                print(fid, fname)
-            except:
-                print("Error audio file:", fpath)
+        with Pool(processes=os.cpu_count()) as pool:  
+            results = pool.map(process_audio, glob.glob(r"{}/*.wav".format(audio_dir)))
+        
+        for fid, log_mel in results:
+            stream[fid] = log_mel  
 
     print("Save", audio_logmel)

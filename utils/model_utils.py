@@ -1,6 +1,6 @@
 import copy
 import os
-
+from tqdm import tqdm
 import numpy as np
 import torch
 
@@ -23,7 +23,7 @@ def init_model(params, vocab):
 
     # Audio encoder params
     if params["audio_enc"]["init"] == "prior":
-        params["audio_enc"]["weight"] = torch.load(params["audio_enc"]["weight"])
+        params["audio_enc"]["weight"] = torch.load(params["audio_enc"]["weight"], weights_only=True)
     else:
         params["audio_enc"]["weight"] = None
 
@@ -32,29 +32,81 @@ def init_model(params, vocab):
 
     return model
 
+# NOTE: Normal Train & Eval
+# def train(model, data_loader, criterion, optimizer):
+#     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+#     criterion.to(device=device)
+#     model.to(device=device)
 
-def train(model, data_loader, criterion, optimizer):
+#     model.train()
+
+#     for batch_idx, data in enumerate(data_loader, 0):
+#         item_batch, audio_batch, text_batch = data
+
+#         audio_batch = audio_batch.to(device)
+#         text_batch = text_batch.to(device)
+
+#         # Zero the parameter gradients
+#         optimizer.zero_grad()
+
+#         # Forward + backward + optimize
+#         audio_embeds, text_embeds = model(audio_batch, text_batch)
+#         loss = criterion(audio_embeds, text_embeds, item_batch)
+#         loss.backward()
+#         optimizer.step()
+
+# def eval(model, data_loader, criterion):
+#     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+#     criterion.to(device=device)
+#     model.to(device=device)
+
+#     model.eval()
+
+#     eval_loss, eval_steps = 0.0, 0
+
+#     with torch.no_grad():
+#         for batch_idx, data in enumerate(data_loader, 0):
+#             item_batch, audio_batch, text_batch = data
+
+#             audio_batch = audio_batch.to(device)
+#             text_batch = text_batch.to(device)
+
+#             audio_embeds, text_embeds = model(audio_batch, text_batch)
+#             loss = criterion(audio_embeds, text_embeds, item_batch)
+
+#             eval_loss += loss.cpu().numpy()
+#             eval_steps += 1
+
+#     return eval_loss / max(eval_steps, 1)
+
+
+# NOTE: TQDM Train & Eval
+def tqdm_train(model, data_loader, criterion, optimizer, epoch, total_epochs):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     criterion.to(device=device)
     model.to(device=device)
 
     model.train()
 
-    for batch_idx, data in enumerate(data_loader, 0):
-        item_batch, audio_batch, text_batch = data
+    # Wrap the data_loader with tqdm
+    with tqdm(data_loader, unit="batch",desc=f'Training Epoch {epoch}/{total_epochs}') as tepoch:
+        for batch_idx, data in enumerate(tepoch, 0):
+            item_batch, audio_batch, text_batch = data
 
-        audio_batch = audio_batch.to(device)
-        text_batch = text_batch.to(device)
+            audio_batch = audio_batch.to(device)
+            text_batch = text_batch.to(device)
 
-        # Zero the parameter gradients
-        optimizer.zero_grad()
+            # Zero the parameter gradients
+            optimizer.zero_grad()
 
-        # Forward + backward + optimize
-        audio_embeds, text_embeds = model(audio_batch, text_batch)
-        loss = criterion(audio_embeds, text_embeds, item_batch)
-        loss.backward()
-        optimizer.step()
+            # Forward + backward + optimize
+            audio_embeds, text_embeds = model(audio_batch, text_batch)
+            loss = criterion(audio_embeds, text_embeds, item_batch)
+            loss.backward()
+            optimizer.step()
 
+            # Update tqdm progress bar
+            tepoch.set_postfix(loss=loss.item())
 
 def eval(model, data_loader, criterion):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -66,24 +118,27 @@ def eval(model, data_loader, criterion):
     eval_loss, eval_steps = 0.0, 0
 
     with torch.no_grad():
-        for batch_idx, data in enumerate(data_loader, 0):
-            item_batch, audio_batch, text_batch = data
+        # Wrap the data_loader with tqdm
+        with tqdm(data_loader, unit="batch", desc="Evaluating") as tepoch:
+            for batch_idx, data in enumerate(tepoch, 0):
+                item_batch, audio_batch, text_batch = data
 
-            audio_batch = audio_batch.to(device)
-            text_batch = text_batch.to(device)
+                audio_batch = audio_batch.to(device)
+                text_batch = text_batch.to(device)
 
-            audio_embeds, text_embeds = model(audio_batch, text_batch)
-            loss = criterion(audio_embeds, text_embeds, item_batch)
+                audio_embeds, text_embeds = model(audio_batch, text_batch)
+                loss = criterion(audio_embeds, text_embeds, item_batch)
 
-            eval_loss += loss.cpu().numpy()
-            eval_steps += 1
+                eval_loss += loss.cpu().numpy()
+                eval_steps += 1
+
+                # Update tqdm progress bar (optional)
+                tepoch.set_postfix(loss=loss.item())
 
     return eval_loss / max(eval_steps, 1)
 
-
 def restore(model, ckp_dir):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model_state, optimizer_state = torch.load(os.path.join(ckp_dir, "checkpoint"),
-                                              map_location=device)
-    model.load_state_dict(model_state)
+    model_state= torch.load(os.path.join(ckp_dir),map_location=device, weights_only=True)
+    model.load_state_dict(model_state['model_state_dict'])
     return model

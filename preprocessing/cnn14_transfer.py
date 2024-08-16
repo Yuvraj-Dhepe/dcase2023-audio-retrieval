@@ -93,7 +93,7 @@ keymap = {
 }
 
 # Parameters of pretrained CNN14
-cnn14_params = torch.load("YOUR_DATA_PATH/pretrained_models/Cnn14_mAP=0.431.pth")["model"]
+cnn14_params = torch.load("./pretrained_models/cnn14.pth", weights_only=True)["model"]
 
 # Transfer pretrained parameters
 cnn14_encoder = audio_encoders.CNN14Encoder(out_dim=300)
@@ -103,4 +103,4 @@ for key in keymap:
 cnn14_encoder.load_state_dict(state_dict)
 
 # Save transferred CNN14
-torch.save(cnn14_encoder.state_dict(), "YOUR_DATA_PATH/pretrained_models/CNN14_300.pth")
+torch.save(cnn14_encoder.state_dict(), "./pretrained_models/CNN14_300.pth")

@@ -1,0 +1,18 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Remote Attach",
+            "type": "debugpy",
+            "request": "attach",
+            "host": "127.0.0.1", //  Your Redis address
+            "port": 6379, //  Your Redis port
+            "pathMappings": [
+                {
+                    "localRoot": "${workspaceFolder}",
+                    "remoteRoot": "/path/to/your/code/on/remote/machine"
+                }
+            ]
+        }
+    ]
+}

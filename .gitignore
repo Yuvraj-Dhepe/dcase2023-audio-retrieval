@@ -1,7 +1,9 @@
 # Custom Files
 data/
-
-
+tmp/
+wandb/
+z_ckpts/
+pretrained_models/*.pth
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

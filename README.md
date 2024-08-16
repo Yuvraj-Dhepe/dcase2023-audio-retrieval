@@ -44,17 +44,21 @@ Clotho
     └─...(1045 wavs)
 ```
 
-3. Pre-process audio and caption data:
+3. Pre-process audio and caption data: `Run the files in the given sr. order`
 
 ```
 preprocessing
-├─ audio_logmel.py              # extract log-mel energies from audio clips
-├─ clotho_dataset.py            # process audio captions, generate fids and cids
-├─ sbert_embeddings.py          # generate sentence embeddings using Sentence-BERT (all-mpnet-base-v2)
-└─ cnn14_transfer.py            # transfer pretrained CNN14 (Cnn14_mAP=0.431.pth)
+├─ 01_clotho_dataset.py            # process audio captions, generate fids and cids
+├─ 02_audio_logmel.py              # extract log-mel energies from audio clips, can run audio_logmel_gpu.py for gpu based version
+├─ 03_sbert_embeddings.py          # generate sentence embeddings using Sentence-BERT (all-mpnet-base-v2)
+└─ 04_cnn14_transfer.py            # transfer pretrained CNN14 (Cnn14_mAP=0.431.pth)
 ```
 
 4. Train the baseline system:
+- Run main_wandb.py for tracking results in wanbdmain.py or
+- Run new_main.py an updated version of main.py, however, it throws some ray error, which needs to be corrected
+- Get the audio encoder weights from the PANNS zenodo [link](https://zenodo.org/records/3987831), download the Cnn14_mAP=0.431.pth weights, or directly use `wget https://zenodo.org/records/3987831/files/Cnn14_mAP%3D0.431.pth?download=1` and put it in pretrained models by naming it as cnn14.pth
+
 
 ```
 models
@@ -67,16 +71,17 @@ utils
 ├─ data_utils.py                # Pytorch dataset classes
 └─ model_utils.py               # model.train(), model.eval(), etc.
 
-conf.yaml                       # experimental settings
+conf.yaml                       # experimental settings, **Edit the data and model paths before starting the training**
 main.py                         # main()
+main_wandb.py                   # Running main where results are tracked in wandb
 ```
 
 5. Calculate retrieval metrics:
-
+`Run the files in the given sr. no order, can run wanbd alternatives to track metrics in wandb`
 ```
 postprocessing
-├─ xmodal_scores.py             # calculate audio-text scores
-└─ xmodal_retrieval.py          # calculate mAP, R@1, R@5, R@10, etc.
+├─ 01_xmodal_scores.py             # calculate audio-text scores
+└─ 02_xmodal_retrieval.py          # calculate mAP, R@1, R@5, R@10, etc.
 ```
 
 # Examples

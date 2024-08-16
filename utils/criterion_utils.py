@@ -30,7 +30,10 @@ class LogSoftmaxLoss(nn.Module):
             sample_indexes = [j for j in range(N) if item_batch[j]["fid"] != item_batch[i]["fid"]]
             sample_indexes.append(i)
 
+            # NOTE: Taking dot product of all the 64 audio embeds with a single text embed, where the last audio embed is the model pred for the T_i
             S_ai = score(audio_embeds[sample_indexes], T_i, self.dist) / self.temperature  # (N')
+
+            # NOTE: Taking dot product of all the 64 text embeds with a single audio embed, where the last text embed is the model pred for the A_i
             S_it = score(A_i, text_embeds[sample_indexes], self.dist) / self.temperature  # (N')
 
             target = torch.as_tensor([j == i for j in sample_indexes], dtype=torch.float,
