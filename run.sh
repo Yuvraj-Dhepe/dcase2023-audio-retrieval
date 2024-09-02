@@ -1,13 +1,17 @@
 #!/bin/bash
 export $(xargs<.env)
 # Execute the first Python file
-echo "Training in Progress"
-python wandb_new.py
+echo "Preprocessing 1"
+python preprocessing/01_agen_clotho_dataset.py
 
-echo "Calculating Audio-Text Scores"
-# Execute the second Python file
-python postprocessing/scores_new.py
+echo "Preprocessing 2"
+python preprocessing/02_agen_multiprocessing_audio_logmel.py
 
-echo "Evaluation in Progress"
-# Execute the third Python file
-python postprocessing/retrieval_new.py
+echo "Preprocessing 3"
+python preprocessing/03_agen_sbert_embeddings.py
+
+echo "Preprocessing 4"
+python preprocessing/04_cnn14_transfer.py
+
+echo "Training"
+python main_wandb_new.py

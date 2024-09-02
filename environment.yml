@@ -1,5 +1,6 @@
-name: audio_dl
+name: audio_craft
 channels:
   - conda-forge
 dependencies:
   - python=3.9.19
+  - ffmpeg<5
