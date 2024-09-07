@@ -18,7 +18,7 @@ from tqdm import tqdm
 
 global_params = {
     # "dataset_dirs": ["./data/Clotho"], # Can use commented combinations as well
-    "dataset_dirs": ["./data/Clotho", "./data/Clotho_caption_2"],
+    "dataset_dirs": ["./data/Clotho", "./data/Clotho_caption_5"],
     # "dataset_dirs": ["./data/Clotho", "./data/Clotho_caption_2", "./data/Clotho_caption_3"]
     "audio_splits": ["development", "validation", "evaluation"],
     "text_files": ["development_captions.csv", "validation_captions.csv", "evaluation_captions.csv"]

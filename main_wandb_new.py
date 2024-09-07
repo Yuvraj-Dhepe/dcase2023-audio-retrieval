@@ -128,7 +128,7 @@ def train_model(conf, run_id=None):
 # Main entry point for training
 if __name__ == "__main__":
     # Load the main configuration from the YAML file
-    with open("./conf_yamls/cap_2_conf.yaml", "rb") as stream:
+    with open("./conf_yamls/cap_5_conf.yaml", "rb") as stream:
         conf = yaml.full_load(stream)
 
     # Check if resuming a previous run

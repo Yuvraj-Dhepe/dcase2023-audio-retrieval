@@ -51,21 +51,6 @@ def generate_audio(caption: str, model: AudioGen):
     # print(f"Time taken to generate audio: {duration:.2f} seconds")
     return convert_audio(outputs, from_rate=16000, to_rate=44100, to_channels=1)
 
-def save_audio(outputs, file_name: str, output_folder: Path, file_cleaner: FileCleaner):
-    # Strip the .wav extension if it exists
-    file_base_name = Path(file_name).stem
-    output_file_name = output_folder / f"{file_base_name}_cap_1"
-    # output_file_name,_ =  os.path.splitext(output_file_name)
-    # print(output_file_name)
-    # Directly write the audio file to the output folder
-    audio_write(
-        output_file_name, outputs[0], 44100, strategy="loudness",
-        loudness_headroom_db=16, loudness_compressor=True
-    )
-
-    file_cleaner.add(output_file_name)
-    # print(f"Generated audio saved as: {output_file_name}")
-
 def process_csv(csv_file_path: str, output_folder: Path, model: AudioGen,caption_col_num:int):
     file_cleaner = FileCleaner()
     output_folder.mkdir(exist_ok=True)
@@ -110,7 +95,7 @@ def save_audio_to_folder(outputs, file_name: str, output_folder: Path, file_clea
     # print(f"Generated audio saved as: {output_file_name}")
 
 if __name__ == "__main__":
-    caption_col_num = 4
+    caption_col_num = 5
     caption_col_folder = f"Clotho_caption_{caption_col_num}"
     split = 'development'
     model = load_model()

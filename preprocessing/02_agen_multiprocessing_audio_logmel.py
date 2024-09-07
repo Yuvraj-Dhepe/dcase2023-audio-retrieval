@@ -103,7 +103,7 @@ def extract_log_mel_spectrograms(dataset_dirs, audio_splits, audio_fid2fname):
 # Main execution
 if __name__ == "__main__":
     global_params = {
-        "dataset_dirs": ["./data/Clotho", "./data/Clotho_caption_2"],  # Modified
+        "dataset_dirs": ["./data/Clotho", "./data/Clotho_caption_5"],  # Modified
         "audio_splits": ["development", "validation", "evaluation"]
     }
 

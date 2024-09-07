@@ -16,7 +16,7 @@ dbm._modules = {"dbm.dumb": dumb}
 # Load English stopwords from nltk
 stopwords = nltk.corpus.stopwords.words("english")
 
-cap_col_num, run_num = 2, 1
+cap_col_num, run_num = 5, 1
 # Load configuration from conf.yaml
 with open(f"./conf_yamls/cap_{cap_col_num}_conf.yaml", "rb") as stream:
     conf = yaml.full_load(stream)

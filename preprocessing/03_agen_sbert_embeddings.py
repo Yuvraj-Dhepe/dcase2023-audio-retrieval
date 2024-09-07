@@ -6,7 +6,7 @@ from sentence_transformers import SentenceTransformer
 from tqdm import tqdm
 
 global_params = {
-    "dataset_dir": "./data/Clotho_caption_2",
+    "dataset_dir": "./data/Clotho_caption_5",
     "audio_splits": ["development", "validation", "evaluation"]
 }
 
