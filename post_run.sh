@@ -7,5 +7,5 @@ python postprocessing/01_scores_wandb_new.py
 echo "Post-processing 2"
 python postprocessing/02_xmodel_data_split.py
 
-echo "Preprocessing 3"
+echo "Post-processing 3"
 python postprocessing/03_retrieval_split_wandb_new.py
