@@ -1,4 +1,4 @@
-name: audio_craft
+name: audio_dl
 channels:
   - conda-forge
 dependencies:

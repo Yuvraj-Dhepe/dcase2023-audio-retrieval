@@ -8,8 +8,8 @@ import wandb
 from tqdm import tqdm
 
 # Load configuration from conf.yaml
-cap_col_num, run_num = 1, 5
-with open(f"./conf_yamls/exp_{cap_col_num}x_conf.yaml", "rb") as stream:
+cap_col_num, run_num = '3x',3
+with open(f"./conf_yamls/cap_{cap_col_num}_conf.yaml", "rb") as stream:
     conf = yaml.full_load(stream)
 
 # Extract WandB configuration
@@ -20,7 +20,7 @@ api = wandb.Api()
 runs = api.runs(wandb_conf['project'])  # Replace with your actual project name
 latest_run = runs[len(runs)-run_num]
 print(f"\nInitializing Run ID: {latest_run.id} && Run Name: {latest_run.name}\n")
-# wandb.init(project=wandb_conf['project'], id=latest_run.id)
+wandb.init(project=wandb_conf['project'], id=latest_run.id)
 
 # Construct the checkpoint directory path
 ckp_fpath = os.path.join("./z_ckpts", latest_run.id)
@@ -99,13 +99,13 @@ def process_db(db_path, dataset_name, way):
           f"R5: {avg_R5:.3f}",
           f"R10: {avg_R10:.3f}", end="\n")
 
-    #Log the metrics to WandB
-    # wandb.log({
-    #     f"{dataset_name}_{way}_mAP": avg_mAP,
-    #     f"{dataset_name}_{way}_R1": avg_R1,
-    #     f"{dataset_name}_{way}_R5": avg_R5,
-    #     f"{dataset_name}_{way}_R10": avg_R10
-    # })
+    # Log the metrics to WandB
+    wandb.log({
+        f"{dataset_name}_{way}_mAP": avg_mAP,
+        f"{dataset_name}_{way}_R1": avg_R1,
+        f"{dataset_name}_{way}_R5": avg_R5,
+        f"{dataset_name}_{way}_R10": avg_R10
+    })
 
 if __name__ == "__main__":
     # Iterate through datasets
@@ -127,11 +127,12 @@ if __name__ == "__main__":
             fid2fname[item["fid"]] = item["fname"]
 
         # Process fid2items separately
-        fid2items_db_fpath = os.path.join(ckp_fpath, f"{name}_fid_2_items_optimized.db")
+        fid2items_db_fpath = os.path.join(ckp_fpath, f"{name}_fid_2_items.db")
+
         process_db(fid2items_db_fpath, dataset_name=name, way='Audio2Txt')
 
         # Process tid2items separately
-        tid2items_db_fpath = os.path.join(ckp_fpath, f"{name}_tid_2_items_optimized.db")
+        tid2items_db_fpath = os.path.join(ckp_fpath, f"{name}_tid_2_items.db")
         process_db(tid2items_db_fpath, dataset_name=name, way='Txt2Audio')
 
         # Output Text2Audio retrieval results
@@ -155,4 +156,4 @@ if __name__ == "__main__":
         print("Saved", result_fpath)
 
         # Log the results to WandB
-        # wandb.log({f"retrieval_results_{name}": wandb.Table(dataframe=results_df)})  # Log the dataframe as a table
+        wandb.log({f"retrieval_results_{name}": wandb.Table(dataframe=results_df)})  # Log the dataframe as a table

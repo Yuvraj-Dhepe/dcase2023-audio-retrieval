@@ -1,24 +1,27 @@
 import dbm
-import json
 import os
 import shelve
 from dbm import dumb
+import pandas as pd
 from tqdm import tqdm
 import torch
 import yaml
 import wandb
 import nltk
 from utils import criterion_utils, data_utils, model_utils
+import gc
+from ast import literal_eval
 
 # Set the default module for dbm to 'dumb'
 dbm._defaultmod = dumb
 dbm._modules = {"dbm.dumb": dumb}
+
 # Load English stopwords from nltk
 stopwords = nltk.corpus.stopwords.words("english")
 
-cap_col_num, run_num = '3x', 3
+cap_col_num, run_num = 1, 11
 # Load configuration from conf.yaml
-with open(f"./conf_yamls/cap_{cap_col_num}_conf.yaml", "rb") as stream:
+with open(f"./conf_yamls/cap_0_conf.yaml", "rb") as stream:
     conf = yaml.full_load(stream)
 
 # Extract wandb configuration
@@ -45,7 +48,7 @@ param_conf = conf["param_conf"]
 model_params = conf[param_conf["model"]]
 obj_params = conf["criteria"][param_conf["criterion"]]
 model = model_utils.init_model(model_params, train_ds.text_vocab)
-model = model_utils.restore(model, os.path.join(ckp_fpath,f"checkpoint_epoch_{param_conf['num_epoch']}"))
+model = model_utils.restore(model, os.path.join(ckp_fpath, f"checkpoint_epoch_{param_conf['num_epoch']}"))
 
 # Control GPU usage
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -60,6 +63,18 @@ batch_size = 1024  # Adjust based on your GPU memory
 
 # Iterate through datasets (train, val, eval)
 for name, ds in zip(["train", "val", "eval"], [train_ds, val_ds, eval_ds]):
+    params = data_conf[name+"_data"]
+    text_fpath = os.path.join(params['dataset'], params['text_data'])
+    text_data = pd.read_csv(text_fpath, converters={'tokens':literal_eval})
+
+    print(f"\n\nLoaded {text_fpath}")
+
+    tid2fid = {}
+    # Process data chunk by chunk
+    for idx in text_data.index:
+        item = text_data.iloc[idx]
+        tid2fid[item["tid"]] = item["fid"]
+
     # Initialize a dictionary to store text embeddings
     text2vec = {}
 
@@ -86,21 +101,25 @@ for name, ds in zip(["train", "val", "eval"], [train_ds, val_ds, eval_ds]):
         # Update text2vec dictionary with embedded text vectors for the batch
         text2vec.update({item.tid: vec for item, vec in zip(batch_data.itertuples(), batch_text_vecs)})
 
-    # Compute pairwise cross-modal scores
-    score_fpath = os.path.join(ckp_fpath, f"{name}_xmodal_scores.db")
-    with shelve.open(filename=score_fpath, flag="n", protocol=2) as stream:
-        # Iterate through unique audio file identifiers
-        for fid in tqdm(ds.text_data["fid"].unique(), desc=f"Computing cross-modal scores for {name} dataset"):
-            # Initialize a dictionary to store scores for the current audio file
-            group_scores = {}
+    # Compute pairwise cross-modal scores and store the 'is_relevant' flag
+    fid_score_fpath = os.path.join(ckp_fpath, f"{name}_fid_xmodal_scores.db")
+    tid_score_fpath = os.path.join(ckp_fpath, f"{name}_tid_xmodal_scores.db")
 
+    with shelve.open(filename=fid_score_fpath, flag="n", protocol=2) as fid_stream, \
+        shelve.open(filename=tid_score_fpath, flag="n", protocol=2) as tid_stream:
+        # Iterate through unique audio file identifiers
+        tid_group_scores = {}  # Indexed by tid
+        #{'fid':{'tid1':'score between tid1 and fid', 'tid2':'score between tid2 and fid'}, 'fid2':{'tid1':'score between tid1 and fid', 'tid2':'score between tid2 and fid2'}}
+        for fid in tqdm(ds.text_data["fid"].unique(), desc=f"Computing cross-modal scores for {name} dataset"):
+
+            fid_group_scores = {}  # Indexed by fid
+            # Initialize dictionaries to store scores
             # Encode audio data
             audio_vec = torch.as_tensor(ds.audio_data[fid][()]).to(device)
             audio_vec = torch.unsqueeze(audio_vec, dim=0)
-            audio_embed = model.audio_branch(audio_vec)[0] # 300 is it's shape
+            audio_embed = model.audio_branch(audio_vec)[0]  # 300 is its shape
 
-            # For a single fid, we will calculate the scores for all tids
-            # Calculate scores in batches
+            # For a single fid, calculate the scores for all tids
             for i in range(0, len(text2vec), batch_size):
                 # Get batch of text IDs
                 batch_text_ids = list(text2vec.keys())[i:min(i + batch_size, len(text2vec))]
@@ -114,12 +133,18 @@ for name, ds in zip(["train", "val", "eval"], [train_ds, val_ds, eval_ds]):
                 # Calculate cross-modal scores for the batch
                 xmodal_scores = criterion_utils.score(audio_embed, batch_text_embeds, obj_params["args"].get("dist", "dot_product"))
 
-                # Update group_scores with calculated scores
+                # Update both dictionaries and add 'is_relevant' flag
                 for j, tid in enumerate(batch_text_ids):
-                    group_scores[tid] = xmodal_scores[j].item()
+                    is_relevant = tid2fid.get(tid) == fid  # Check if tid belongs to the current fid
+                    fid_group_scores[tid] = (xmodal_scores[j].item(), is_relevant)
+                    if tid not in tid_group_scores:
+                        tid_group_scores[tid] = []
+                    tid_group_scores[tid].append((fid, xmodal_scores[j].item(), is_relevant))
 
-            # Save scores for the current audio file
-            stream[fid] = group_scores
-            #{'fid':{'tid1':'score between tid1 and fid', 'tid2':'score between tid2 and fid'}, 'fid2':{'tid1':'score between tid1 and fid', 'tid2':'score between tid2 and fid2'}}
+            # Save scores for the current audio file (fid)
+            fid_stream[fid] = [(tid, fid_group_scores[tid][0],fid_group_scores[tid][1]) for tid in fid_group_scores.keys()]
 
-    print("Save", score_fpath)
+        # Save the tid-based scores after processing all fids
+        tid_stream.update(tid_group_scores)
+
+    print("Saved:", fid_score_fpath, "and", tid_score_fpath)
