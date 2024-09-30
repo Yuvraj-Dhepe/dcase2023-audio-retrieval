@@ -12,7 +12,7 @@ dbm._defaultmod = dumb
 dbm._modules = {"dbm.dumb": dumb}
 
 # Load configuration from conf.yaml
-cap_col_num, run_num = '3x', 3
+cap_col_num, run_num = '5x', 1
 
 with open(f"./conf_yamls/cap_{cap_col_num}_conf.yaml", "rb") as stream:
     conf = yaml.full_load(stream)
@@ -34,7 +34,7 @@ ckp_fpath = os.path.join("./z_ckpts", latest_run.id)
 data_conf = conf["data_conf"]
 
 # Iterate through datasets
-for name in data_conf.keys():
+for name in ['val_data','eval_data']:
     params = data_conf[name]
     name = name.replace("_data", "")
 
@@ -55,8 +55,8 @@ for name in data_conf.keys():
     score_fpath = os.path.join(ckp_fpath, f"{name}_xmodal_scores.db")
 
     # Initialize shelve databases for storage
-    fid2items_db_fpath = os.path.join(ckp_fpath, f"{name}_fid_2_items.db")
-    tid2items_db_fpath = os.path.join(ckp_fpath, f"{name}_tid_2_items.db")
+    fid2items_db_fpath = os.path.join(ckp_fpath, f"{name}_fid_2_items_latest.db")
+    tid2items_db_fpath = os.path.join(ckp_fpath, f"{name}_tid_2_items_latest.db")
 
     with shelve.open(score_fpath) as stream, shelve.open(fid2items_db_fpath, 'c') as fid_stream, shelve.open(tid2items_db_fpath, 'c') as tid_stream:
 

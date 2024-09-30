@@ -62,7 +62,7 @@ model.eval()
 batch_size = 1024  # Adjust based on your GPU memory
 
 # Iterate through datasets (train, val, eval)
-for name, ds in zip(["train", "val", "eval"], [train_ds, val_ds, eval_ds]):
+for name, ds in zip(["val", "eval"], [val_ds, eval_ds]):
     params = data_conf[name+"_data"]
     text_fpath = os.path.join(params['dataset'], params['text_data'])
     text_data = pd.read_csv(text_fpath, converters={'tokens':literal_eval})

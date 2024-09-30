@@ -29,7 +29,7 @@ cnn14_encoder = audio_encoders.CNN14Encoder(out_dim=300)
 
 # Load pretrained parameters
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-state_dict = torch.load("example/audio_encoder.pth", map_location=device)
+state_dict = torch.load("pretrained_models/CNN14_300.pth", map_location=device, weights_only=True)
 cnn14_encoder.load_state_dict(state_dict)
 cnn14_encoder.eval()
 

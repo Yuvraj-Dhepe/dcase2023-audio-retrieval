@@ -8,7 +8,7 @@ import wandb
 from tqdm import tqdm
 
 # Load configuration from conf.yaml
-cap_col_num, run_num = '3x',3
+cap_col_num, run_num = '5x',1
 with open(f"./conf_yamls/cap_{cap_col_num}_conf.yaml", "rb") as stream:
     conf = yaml.full_load(stream)
 
@@ -109,7 +109,7 @@ def process_db(db_path, dataset_name, way):
 
 if __name__ == "__main__":
     # Iterate through datasets
-    for name in data_conf.keys():
+    for name in ['val_data','eval_data']:
         params = data_conf[name]
         name = name.replace("_data", "")
 
@@ -127,12 +127,12 @@ if __name__ == "__main__":
             fid2fname[item["fid"]] = item["fname"]
 
         # Process fid2items separately
-        fid2items_db_fpath = os.path.join(ckp_fpath, f"{name}_fid_2_items.db")
+        fid2items_db_fpath = os.path.join(ckp_fpath, f"{name}_fid_2_items_latest.db")
 
         process_db(fid2items_db_fpath, dataset_name=name, way='Audio2Txt')
 
         # Process tid2items separately
-        tid2items_db_fpath = os.path.join(ckp_fpath, f"{name}_tid_2_items.db")
+        tid2items_db_fpath = os.path.join(ckp_fpath, f"{name}_tid_2_items_latest.db")
         process_db(tid2items_db_fpath, dataset_name=name, way='Txt2Audio')
 
         # Output Text2Audio retrieval results

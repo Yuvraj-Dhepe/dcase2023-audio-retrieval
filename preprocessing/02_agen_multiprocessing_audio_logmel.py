@@ -54,7 +54,8 @@ def process_audio(fpath, fname2fid):
         y, sr, window_length_secs=0.040, hop_length_secs=0.020,
         num_mels=64, log_offset=np.spacing(1)
     )
-
+    # TODO: remove stacking and once check the baseline scores are they impacted or not
+    # Stacking is useless as the log_mel is 2d, and vstack returns the same array.
     return fid, np.vstack(log_mel).transpose()
 
 

@@ -63,6 +63,7 @@ def process_audio(fpath, fname2fid):
     )
 
     # Return the file ID and the log-mel spectrogram transposed for correct shape
+    # TODO: remove stacking and once check the baseline scores are they impacted or not
     return fid, np.vstack(log_mel).transpose()
 
 def extract_log_mel_spectrograms(dataset_dirs, audio_splits, audio_fid2fname, output_dir):
