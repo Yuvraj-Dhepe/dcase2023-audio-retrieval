@@ -156,6 +156,20 @@ def compare_subsequence_dtw(log_mel_orig, log_mel_aug):
 
     return np.mean(normalized_dtw) # 0 similar, 1 is dissimilar
 
+# The DTW function in librosa is designed to work with multidimensional data, so it computes the alignment between the two sequences by considering the multi-dimensional Euclidean distance between corresponding points in the spectrograms. In this case, each frame (time step) is represented by a feature vector of length n_mels.
+
+# Here's an explanation of how it works:
+
+# Input Format for DTW:
+# log_mel_orig.T: Shape [time, n_mels]
+# log_mel_aug.T: Shape [time, n_mels]
+# DTW Calculation:
+# The DTW algorithm aligns the original and augmented sequences by minimizing the cumulative distance between frames over time. Since your log-mel spectrograms are 2D, it will calculate the Euclidean distance between corresponding feature vectors (rows, in this case) across the time axis.
+
+# The .T in the function ensures the input to librosa.sequence.dtw is in [time, features] format. Each "feature" in this case is a vector of n_mels (the mel frequency bins), so the DTW distance will be computed by comparing feature vectors across time steps.
+
+# Thus, DTW can handle 2D log-mel spectrograms and provide an appropriate alignment distance.
+
 
 def compare_sliding_window_cross_correlation(log_mel_orig, log_mel_aug):
     """
