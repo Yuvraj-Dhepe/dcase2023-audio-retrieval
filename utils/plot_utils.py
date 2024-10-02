@@ -1,7 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
-def plot_dtw_score_distribution(csv_path, plot_title, similarity_threshold, output_path):
+def plot_dtw_score_distribution(csv_path, plot_title, similarity_threshold, output_path, col_num):
     """
     Function to plot score distribution from a CSV file and display the number of
     'very similar' audios based on a given threshold.
@@ -18,9 +18,9 @@ def plot_dtw_score_distribution(csv_path, plot_title, similarity_threshold, outp
 
     # Extract the first two words from the plot title for x-axis label
     xlabel = " ".join(plot_title.split()[:2])
-
+    plot_title = f"{plot_title} for column {col_num}"
     # Plot the distribution of similarity scores
-    plt.figure(figsize=(9, 6))
+    plt.figure(figsize=(6, 4))
     plt.hist(df['similarity_score'], bins=50, alpha=0.75)
     plt.title(plot_title)
     plt.xlabel(xlabel)
@@ -41,7 +41,7 @@ def plot_dtw_score_distribution(csv_path, plot_title, similarity_threshold, outp
     plt.show()
 
 
-def plot_wcc_score_distribution(csv_path, plot_title, similarity_threshold, output_path):
+def plot_wcc_score_distribution(csv_path, plot_title, similarity_threshold, output_path, col_num):
     """
     Function to plot the correlation score distribution from a CSV file and display
     the count of 'very similar' and 'negative correlation' audios based on given thresholds.
@@ -58,9 +58,9 @@ def plot_wcc_score_distribution(csv_path, plot_title, similarity_threshold, outp
 
     # Extract the first two words from the plot title for x-axis label
     xlabel = " ".join(plot_title.split()[:2])
-
+    plot_title = f"{plot_title} for column {col_num}"
     # Plot the distribution of similarity scores
-    plt.figure(figsize=(9, 6))
+    plt.figure(figsize=(6, 4))
     plt.hist(df['similarity_score'], bins=50, alpha=0.75)
     plt.title(plot_title)
     plt.xlabel(xlabel)
@@ -87,7 +87,7 @@ def plot_wcc_score_distribution(csv_path, plot_title, similarity_threshold, outp
     print(f'Number of audios that are very similar (score < {similarity_threshold}): {very_similar_count}')
     print(f'Number of audios with negative correlation (score > 1): {negative_correlation_count}')
 
-def plot_embed_score_distribution(csv_path, plot_title, similarity_threshold, output_path):
+def plot_embed_score_distribution(csv_path, plot_title, similarity_threshold, output_path,col_num):
     """
     Function to plot the similarity score distribution from a CSV file and display
     the count of 'very similar' audios based on a given threshold.
@@ -104,9 +104,9 @@ def plot_embed_score_distribution(csv_path, plot_title, similarity_threshold, ou
 
     # Extract the first two words from the plot title for x-axis label
     xlabel = " ".join(plot_title.split()[:2])
-
+    plot_title = f"{plot_title} for column {col_num}"
     # Plot the distribution of similarity scores
-    plt.figure(figsize=(9, 6))
+    plt.figure(figsize=(6, 4))
     plt.hist(df['similarity_score'], bins=50, alpha=0.75)
     plt.title(plot_title)
     plt.xlabel(xlabel)

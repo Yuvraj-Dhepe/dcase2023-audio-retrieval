@@ -117,9 +117,8 @@ def compare_subsequence_dtw(log_mel_orig, log_mel_aug):
     """
     # https://www.audiolabs-erlangen.de/resources/MIR/FMP/C3/C3S2_DTWbasic.html
     Perform a subsequence DTW comparison between two log-mel spectrograms.
-
-    This compares the entire original spectrogram against subsequences of the augmented spectrogram.
-
+    Compare the entire original spectrogram against subsequences of the
+    augmented spectrogram.
     :param log_mel_orig: Log-mel spectrogram of the original audio.
     :param log_mel_aug: Log-mel spectrogram of the augmented audio.
     :return: Average DTW distance between the original and any subsequence of the augmented spectrogram.
@@ -141,10 +140,12 @@ def compare_subsequence_dtw(log_mel_orig, log_mel_aug):
         distance, _ = librosa.sequence.dtw(X=log_mel_orig.T, Y=windowed_aug.T, metric='euclidean')
         dtw_distance = distance[-1, -1]  # Use the final distance in the matrix
         # as it's the max distance amongst the original sequence and aug subsequence
+
         # Keep track of the DTW distance
         dtw_distances.append(dtw_distance)
+
     # Normalize DTW distances
-    max_dtw_distance = np.max(dtw_distances)  # This could be a predefined max distance
+    max_dtw_distance = np.max(dtw_distances)
     min_dtw_distance = np.min(dtw_distances)
 
     if max_dtw_distance==min_dtw_distance:
@@ -271,6 +272,7 @@ def compare_audio_folders_for_development(original_folder, augmented_folder, fid
             print(f"None similarity score for {original_audio_path}")
 
     return results
+
 def process_fid_chunks(original_folder, augmented_folder, fid_file_path, output_csv_path, input_fn, comparison_fn, cap_num, num_chunks,method, NUM=None):
     """
     Process audio files in parallel by splitting the fid data into chunks.
