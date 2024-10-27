@@ -18,27 +18,24 @@ sweep:
       max: 0.01
 
     batch_size:
-      values: [64, 128, 256]
-
-    num_epoch:
-      values: [50] # Fixed epoch count
+      values: [128, 256]
 
     # Individual parameters for each trainable block
     bn_block:
-      values: [True, False]
+      values: [True] # Always beneficial for stability
     conv_block1:
-      values: [True, False]
+      values: [False] # To avoid complexity with limited data
     conv_block2:
-      values: [True, False]
+      values: [False] # To avoid complexity with limited data
     conv_block3:
-      values: [True, False]
+      values: [False] # To avoid complexity with limited data
     conv_block4:
-      values: [True, False]
+      values: [False] # To avoid complexity with limited data
     conv_block5:
-      values: [True, False]
+      values: [True, False] # Enables additional feature extraction
     conv_block6:
-      values: [True, False]
+      values: [True, False] # Enables additional feature extraction
     fc_block:
-      values: [True, False]
+      values: [True] # Necessary to fine-tune final head for better classification
 
 program: main_wandb_new.py

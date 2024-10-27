@@ -26,6 +26,13 @@ def train_model(conf, run_id=None):
     :param conf: The configuration dictionary.
     :param run_id: Optional run ID for resuming a previous run.
     """
+    # Initialize Weights & Biases run
+    wandb_conf = conf.get("wandb_conf", {})
+    if run_id:
+        wandb.init(id=run_id, resume="must", **wandb_conf)
+    else:
+        wandb.init(**wandb_conf)
+
     # Load data and parameter configurations, applying sweep overrides if available
     data_conf = conf["data_conf"]
     param_conf = conf["param_conf"]
@@ -84,8 +91,13 @@ def train_model(conf, run_id=None):
     )
 
     optim_params = conf[param_conf["optimizer"]]
+    optimizer_args = optim_params["args"].copy()  # Copy the args dictionary
+
+    if "lr" in wandb.config:
+        optimizer_args.pop("lr", None)  # Remove 'lr' if it's in the config
+
     optimizer = getattr(optim, optim_params["name"], None)(
-        model.parameters(), lr=wandb.config.lr, **optim_params["args"]
+        model.parameters(), lr=wandb.config.lr, **optimizer_args
     )
 
     lr_params = conf[param_conf["lr_scheduler"]]
@@ -93,12 +105,6 @@ def train_model(conf, run_id=None):
         optim.lr_scheduler, lr_params["name"], "ReduceLROnPlateau"
     )(optimizer, **lr_params["args"])
 
-    # Initialize Weights & Biases run
-    wandb_conf = conf.get("wandb_conf", {})
-    if run_id:
-        wandb.init(id=run_id, resume="must", **wandb_conf)
-    else:
-        wandb.init(**wandb_conf)
     wandb.watch(model)
 
     # Load model from checkpoint if specified and resuming
@@ -180,7 +186,8 @@ def train_model(conf, run_id=None):
 # Main entry point for training
 if __name__ == "__main__":
     # Load the main configuration from the YAML file
-    with open("./conf_yamls/cap_1x_conf.yaml", "rb") as stream:
+    conf_num = 0
+    with open(f"./conf_yamls/cap_{conf_num}_conf.yaml", "rb") as stream:
         conf = yaml.full_load(stream)
 
     # Check if resuming a previous run
