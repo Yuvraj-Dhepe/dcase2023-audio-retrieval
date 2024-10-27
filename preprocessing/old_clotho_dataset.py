@@ -11,7 +11,11 @@ from mutagen.wave import WAVE
 global_params = {
     "dataset_dir": "./data/Clotho",
     "audio_splits": ["development", "validation", "evaluation"],
-    "text_files": ["development_captions.csv", "validation_captions.csv", "evaluation_captions.csv"]
+    "text_files": [
+        "development_captions.csv",
+        "validation_captions.csv",
+        "evaluation_captions.csv",
+    ],
 }
 
 # %% 1. Process audio data
@@ -45,12 +49,20 @@ for split in global_params["audio_splits"]:
 # Save audio info
 audio_info = os.path.join(global_params["dataset_dir"], "audio_info.pkl")
 with open(audio_info, "wb") as store:
-    pickle.dump({"audio_fid2fname": audio_fid2fname, "audio_durations": audio_durations}, store)
+    pickle.dump(
+        {
+            "audio_fid2fname": audio_fid2fname,
+            "audio_durations": audio_durations,
+        },
+        store,
+    )
 print("Save audio info to", audio_info)
 
 # %% 2. Process text data
 
-for split, text_fname in zip(global_params["audio_splits"], global_params["text_files"]):
+for split, text_fname in zip(
+    global_params["audio_splits"], global_params["text_files"]
+):
 
     fid2fname = audio_fid2fname[split]
     stripped_fname2fid = {fid2fname[fid].strip(" "): fid for fid in fid2fname}
@@ -74,9 +86,14 @@ for split, text_fname in zip(global_params["audio_splits"], global_params["text_
         # tid, fid, fname, raw_text, text, tokens
         text_rows.append([tid, fid, fid2fname[fid], raw_text, text, tokens])
 
-    text_rows = pd.DataFrame(data=text_rows, columns=["tid", "fid", "fname", "raw_text", "text", "tokens"])
+    text_rows = pd.DataFrame(
+        data=text_rows,
+        columns=["tid", "fid", "fname", "raw_text", "text", "tokens"],
+    )
 
-    text_fpath = os.path.join(global_params["dataset_dir"], f"{split}_text.csv")
+    text_fpath = os.path.join(
+        global_params["dataset_dir"], f"{split}_text.csv"
+    )
     text_rows.to_csv(text_fpath, index=False)
     print("Save", text_fpath)
 
@@ -94,7 +111,9 @@ for split in global_params["audio_splits"]:
 
     fid2fname = audio_fid2fname[split]
 
-    text_fpath = os.path.join(global_params["dataset_dir"], f"{split}_text.csv")
+    text_fpath = os.path.join(
+        global_params["dataset_dir"], f"{split}_text.csv"
+    )
     text_data = pd.read_csv(text_fpath, converters={"tokens": literal_eval})
 
     num_clips = len(fid2fname)
@@ -110,15 +129,18 @@ for split in global_params["audio_splits"]:
     split_infos[split] = {
         "num_clips": num_clips,
         "num_captions": num_captions,
-        "num_words": num_words
+        "num_words": num_words,
     }
 
 # Save vocabulary
 vocab_info = os.path.join(global_params["dataset_dir"], "vocab_info.pkl")
 with open(vocab_info, "wb") as store:
-    pickle.dump({
-        "vocabulary": vocabulary,
-        "word_bags": word_bags,
-        "split_infos": split_infos
-    }, store)
+    pickle.dump(
+        {
+            "vocabulary": vocabulary,
+            "word_bags": word_bags,
+            "split_infos": split_infos,
+        },
+        store,
+    )
 print("Save vocabulary info to", vocab_info)

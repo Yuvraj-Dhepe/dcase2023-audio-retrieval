@@ -28,7 +28,9 @@ api = wandb.Api()
 runs = api.runs(wandb_conf["project"])  # Replace with your actual project name
 latest_run = runs[len(runs) - run_num]
 
-print(f"\nInitializing Run ID: {latest_run.id} && Run Name: {latest_run.name}\n")
+print(
+    f"\nInitializing Run ID: {latest_run.id} && Run Name: {latest_run.name}\n"
+)
 
 # Construct the checkpoint directory path
 ckp_fpath = os.path.join("./z_ckpts", latest_run.id)
@@ -45,7 +47,8 @@ model_params = conf[param_conf["model"]]
 obj_params = conf["criteria"][param_conf["criterion"]]
 model = model_utils.init_model(model_params, train_ds.text_vocab)
 model = model_utils.restore(
-    model, os.path.join(ckp_fpath, f"checkpoint_epoch_{param_conf['num_epoch']}")
+    model,
+    os.path.join(ckp_fpath, f"checkpoint_epoch_{param_conf['num_epoch']}"),
 )
 
 # Control GPU usage
@@ -74,7 +77,10 @@ for name, ds in zip(["train", "val", "eval"], [train_ds, val_ds, eval_ds]):
         tid2fid[item["tid"]] = item["fid"]
 
     # Initialize an empty DataFrame for cross-modal scores
-    df_shape = (len(ds.text_data["tid"].unique()), len(ds.text_data["fid"].unique()))
+    df_shape = (
+        len(ds.text_data["tid"].unique()),
+        len(ds.text_data["fid"].unique()),
+    )
     score_df = pd.DataFrame(
         data=pd.NA,
         index=ds.text_data["tid"].unique(),
@@ -94,7 +100,9 @@ for name, ds in zip(["train", "val", "eval"], [train_ds, val_ds, eval_ds]):
         desc=f"Encoding text for {name} dataset",
     ):
         # Get a batch of text data
-        batch_data = ds.text_data.iloc[idx : min(idx + batch_size, len(ds.text_data))]
+        batch_data = ds.text_data.iloc[
+            idx : min(idx + batch_size, len(ds.text_data))
+        ]
 
         # Initialize a list to store embedded text vectors for the batch
         batch_text_vecs = []
@@ -104,16 +112,24 @@ for name, ds in zip(["train", "val", "eval"], [train_ds, val_ds, eval_ds]):
             # Embed text data based on text level (word or sentence)
             if ds.text_level == "word":
                 text_vec = torch.as_tensor(
-                    [ds.text_vocab(key) for key in item.tokens if key not in stopwords]
+                    [
+                        ds.text_vocab(key)
+                        for key in item.tokens
+                        if key not in stopwords
+                    ]
                 )
                 text_vec = model.text_branch(
                     torch.unsqueeze(text_vec, dim=0).to(device)
                 )[
                     0
                 ]  # Embed text data
-                batch_text_vecs.append(torch.unsqueeze(text_vec, dim=0).to(device))
+                batch_text_vecs.append(
+                    torch.unsqueeze(text_vec, dim=0).to(device)
+                )
             elif ds.text_level == "sentence":
-                text_vec = torch.as_tensor([ds.text_vocab(item.tid)]).to(device)
+                text_vec = torch.as_tensor([ds.text_vocab(item.tid)]).to(
+                    device
+                )
                 text_vec = model.text_branch(torch.unsqueeze(text_vec, dim=0))[
                     0
                 ]  # Embed text data
@@ -133,7 +149,6 @@ for name, ds in zip(["train", "val", "eval"], [train_ds, val_ds, eval_ds]):
         desc=f"Computing cross-modal scores for {name} dataset",
     ):
         # Load the scores file chunk corresponding to this fid (or relevant part of the DataFrame)
-
 
         # Encode audio data
         audio_vec = torch.as_tensor(ds.audio_data[fid][()]).to(device)

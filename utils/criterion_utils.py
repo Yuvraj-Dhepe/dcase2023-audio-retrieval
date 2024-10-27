@@ -20,24 +20,39 @@ class LogSoftmaxLoss(nn.Module):
         """
         N = audio_embeds.size(0)
 
-        loss = torch.tensor(0., device=audio_embeds.device, requires_grad=True)
+        loss = torch.tensor(
+            0.0, device=audio_embeds.device, requires_grad=True
+        )
 
         for i in range(N):
             # Anchor audio-text pair
             A_i, T_i = audio_embeds[i], text_embeds[i]
 
             # Negative + Anchor audio-text pairs
-            sample_indexes = [j for j in range(N) if item_batch[j]["fid"] != item_batch[i]["fid"]]
+            sample_indexes = [
+                j
+                for j in range(N)
+                if item_batch[j]["fid"] != item_batch[i]["fid"]
+            ]
             sample_indexes.append(i)
 
             # NOTE: Taking dot product of all the 64 audio embeds with a single text embed, where the last audio embed is the model pred for the T_i
-            S_ai = score(audio_embeds[sample_indexes], T_i, self.dist) / self.temperature  # (N')
+            S_ai = (
+                score(audio_embeds[sample_indexes], T_i, self.dist)
+                / self.temperature
+            )  # (N')
 
             # NOTE: Taking dot product of all the 64 text embeds with a single audio embed, where the last text embed is the model pred for the A_i
-            S_it = score(A_i, text_embeds[sample_indexes], self.dist) / self.temperature  # (N')
+            S_it = (
+                score(A_i, text_embeds[sample_indexes], self.dist)
+                / self.temperature
+            )  # (N')
 
-            target = torch.as_tensor([j == i for j in sample_indexes], dtype=torch.float,
-                                     device=audio_embeds.device)  # (N')
+            target = torch.as_tensor(
+                [j == i for j in sample_indexes],
+                dtype=torch.float,
+                device=audio_embeds.device,
+            )  # (N')
 
             # Log softmax loss (i.e., InfoNCE Loss, NT-Xent Loss, Multi-class N-pair Loss, Categorical CE Loss)
             L_ai = F.cross_entropy(S_ai, target)

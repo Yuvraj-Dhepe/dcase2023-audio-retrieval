@@ -3,6 +3,7 @@ import torch.nn as nn
 
 def init_weights(m):
     if isinstance(m, (nn.Conv2d, nn.Conv1d, nn.Linear)):
+        # Initialize the layers from normal distribution
         nn.init.kaiming_normal_(m.weight)
         if m.bias is not None:
             nn.init.constant_(m.bias, 0)

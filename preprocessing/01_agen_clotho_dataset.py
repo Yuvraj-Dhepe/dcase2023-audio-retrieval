@@ -21,8 +21,13 @@ global_params = {
     "dataset_dirs": ["./data/Clotho", "./data/Clotho_caption_5"],
     # "dataset_dirs": ["./data/Clotho", "./data/Clotho_caption_2", "./data/Clotho_caption_3"]
     "audio_splits": ["development", "validation", "evaluation"],
-    "text_files": ["development_captions.csv", "validation_captions.csv", "evaluation_captions.csv"]
+    "text_files": [
+        "development_captions.csv",
+        "validation_captions.csv",
+        "evaluation_captions.csv",
+    ],
 }
+
 
 def process_audio_data(dataset_dirs, audio_splits):
     """
@@ -43,12 +48,17 @@ def process_audio_data(dataset_dirs, audio_splits):
         if split == "development":
             used_dataset_dirs = dataset_dirs  # Use all directories
         else:
-            used_dataset_dirs = [dataset_dirs[0]] # Use only the first directory
+            used_dataset_dirs = [
+                dataset_dirs[0]
+            ]  # Use only the first directory
 
         for dataset_dir in used_dataset_dirs:
             audio_dir = os.path.join(dataset_dir, split)
 
-            for fpath in tqdm(glob.glob(r"{}/*.wav".format(audio_dir)), desc=f"Processing audio files in {split}"):
+            for fpath in tqdm(
+                glob.glob(r"{}/*.wav".format(audio_dir)),
+                desc=f"Processing audio files in {split}",
+            ):
                 try:
                     clip = WAVE(fpath)
 
@@ -66,7 +76,11 @@ def process_audio_data(dataset_dirs, audio_splits):
         audio_fid2fname[split] = fid2fname
         audio_durations[split] = durations
 
-    return {"audio_fid2fname": audio_fid2fname, "audio_durations": audio_durations}
+    return {
+        "audio_fid2fname": audio_fid2fname,
+        "audio_durations": audio_durations,
+    }
+
 
 def process_text_data(dataset_dirs, audio_splits, text_files, audio_fid2fname):
     """
@@ -81,14 +95,18 @@ def process_text_data(dataset_dirs, audio_splits, text_files, audio_fid2fname):
     for split, text_fname in zip(audio_splits, text_files):
 
         fid2fname = audio_fid2fname[split]
-        stripped_fname2fid = {fid2fname[fid].strip(" "): fid for fid in fid2fname}
+        stripped_fname2fid = {
+            fid2fname[fid].strip(" "): fid for fid in fid2fname
+        }
 
         text_fpath = os.path.join(dataset_dirs[-1], text_fname)
         text_data = pd.read_csv(text_fpath)
 
         text_rows = []
 
-        for i in tqdm(text_data.index, desc=f"Processing text data in {split}"):
+        for i in tqdm(
+            text_data.index, desc=f"Processing text data in {split}"
+        ):
             fname = text_data.iloc[i].fname
             raw_text = text_data.iloc[i].raw_text
             text = text_data.iloc[i].text
@@ -98,14 +116,20 @@ def process_text_data(dataset_dirs, audio_splits, text_files, audio_fid2fname):
 
             tokens = [t for t in re.split(r"\s", text) if len(t) > 0]
 
-            text_rows.append([tid, fid, fid2fname[fid], raw_text, text, tokens])
+            text_rows.append(
+                [tid, fid, fid2fname[fid], raw_text, text, tokens]
+            )
 
-        text_rows = pd.DataFrame(data=text_rows, columns=["tid", "fid", "fname", "raw_text", "text", "tokens"])
+        text_rows = pd.DataFrame(
+            data=text_rows,
+            columns=["tid", "fid", "fname", "raw_text", "text", "tokens"],
+        )
 
         text_fpath = os.path.join(dataset_dirs[-1], f"{split}_text.csv")
         text_rows.to_csv(text_fpath, index=False)
         print("Save", text_fpath)
-        print('='*90)
+        print("=" * 90)
+
 
 def generate_data_statistics(dataset_dirs, audio_splits, audio_fid2fname):
     """
@@ -125,13 +149,17 @@ def generate_data_statistics(dataset_dirs, audio_splits, audio_fid2fname):
         fid2fname = audio_fid2fname[split]
 
         text_fpath = os.path.join(dataset_dirs[-1], f"{split}_text.csv")
-        text_data = pd.read_csv(text_fpath, converters={"tokens": literal_eval})
+        text_data = pd.read_csv(
+            text_fpath, converters={"tokens": literal_eval}
+        )
 
         num_clips = len(fid2fname)
         num_captions = text_data.tid.size
 
         bag = []
-        for tokens in tqdm(text_data["tokens"], desc=f"Generating data statistics for {split}"):
+        for tokens in tqdm(
+            text_data["tokens"], desc=f"Generating data statistics for {split}"
+        ):
             bag.extend(tokens)
             vocabulary = vocabulary.union(tokens)
 
@@ -140,33 +168,53 @@ def generate_data_statistics(dataset_dirs, audio_splits, audio_fid2fname):
         split_infos[split] = {
             "num_clips": num_clips,
             "num_captions": num_captions,
-            "num_words": num_words
+            "num_words": num_words,
         }
 
-    return {"vocabulary": vocabulary, "word_bags": word_bags, "split_infos": split_infos}
+    return {
+        "vocabulary": vocabulary,
+        "word_bags": word_bags,
+        "split_infos": split_infos,
+    }
+
 
 # %% Main execution
 
 if __name__ == "__main__":
     # Process audio data
-    audio_data = process_audio_data(global_params["dataset_dirs"], global_params["audio_splits"])
+    audio_data = process_audio_data(
+        global_params["dataset_dirs"], global_params["audio_splits"]
+    )
 
     # Save audio info
-    audio_info = os.path.join(global_params["dataset_dirs"][-1], "audio_info.pkl")
+    audio_info = os.path.join(
+        global_params["dataset_dirs"][-1], "audio_info.pkl"
+    )
     with open(audio_info, "wb") as store:
         pickle.dump(audio_data, store)
     print("Save audio info to", audio_info)
-    print('='*90)
+    print("=" * 90)
 
     # Process text data
-    process_text_data(global_params["dataset_dirs"], global_params["audio_splits"],global_params["text_files"], audio_data["audio_fid2fname"])
+    process_text_data(
+        global_params["dataset_dirs"],
+        global_params["audio_splits"],
+        global_params["text_files"],
+        audio_data["audio_fid2fname"],
+    )
 
     # Generate data statistics
-    data_statistics = generate_data_statistics(global_params["dataset_dirs"], global_params["audio_splits"],audio_data["audio_fid2fname"])
+    data_statistics = generate_data_statistics(
+        global_params["dataset_dirs"],
+        global_params["audio_splits"],
+        audio_data["audio_fid2fname"],
+    )
 
     # Save vocabulary
-    vocab_info = os.path.join(global_params["dataset_dirs"][-1], "vocab_info.pkl")
+    vocab_info = os.path.join(
+        global_params["dataset_dirs"][-1], "vocab_info.pkl"
+    )
     with open(vocab_info, "wb") as store:
         pickle.dump(data_statistics, store)
     print("Save vocabulary info to", vocab_info)
-    print('='*90)
+    print("=" * 90)

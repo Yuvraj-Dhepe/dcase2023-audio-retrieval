@@ -12,7 +12,7 @@ dbm._defaultmod = dumb
 dbm._modules = {"dbm.dumb": dumb}
 
 # Load configuration from conf.yaml
-cap_col_num, run_num = '5x', 1
+cap_col_num, run_num = "5x", 1
 
 with open(f"./conf_yamls/cap_{cap_col_num}_conf.yaml", "rb") as stream:
     conf = yaml.full_load(stream)
@@ -22,11 +22,13 @@ wandb_conf = conf.get("wandb_conf", {})
 
 # Get the latest WandB run directory
 api = wandb.Api()
-runs = api.runs(wandb_conf['project'])  # Replace with your actual project name
+runs = api.runs(wandb_conf["project"])  # Replace with your actual project name
 latest_run = runs[len(runs) - run_num]
 
 # Construct the checkpoint directory path
-print(f"\nInitializing Run ID: {latest_run.id} && Run Name: {latest_run.name}\n")
+print(
+    f"\nInitializing Run ID: {latest_run.id} && Run Name: {latest_run.name}\n"
+)
 
 ckp_fpath = os.path.join("./z_ckpts", latest_run.id)
 
@@ -34,7 +36,7 @@ ckp_fpath = os.path.join("./z_ckpts", latest_run.id)
 data_conf = conf["data_conf"]
 
 # Iterate through datasets
-for name in ['val_data','eval_data']:
+for name in ["val_data", "eval_data"]:
     params = data_conf[name]
     name = name.replace("_data", "")
 
@@ -55,10 +57,16 @@ for name in ['val_data','eval_data']:
     score_fpath = os.path.join(ckp_fpath, f"{name}_xmodal_scores.db")
 
     # Initialize shelve databases for storage
-    fid2items_db_fpath = os.path.join(ckp_fpath, f"{name}_fid_2_items_latest.db")
-    tid2items_db_fpath = os.path.join(ckp_fpath, f"{name}_tid_2_items_latest.db")
+    fid2items_db_fpath = os.path.join(
+        ckp_fpath, f"{name}_fid_2_items_latest.db"
+    )
+    tid2items_db_fpath = os.path.join(
+        ckp_fpath, f"{name}_tid_2_items_latest.db"
+    )
 
-    with shelve.open(score_fpath) as stream, shelve.open(fid2items_db_fpath, 'c') as fid_stream, shelve.open(tid2items_db_fpath, 'c') as tid_stream:
+    with shelve.open(score_fpath) as stream, shelve.open(
+        fid2items_db_fpath, "c"
+    ) as fid_stream, shelve.open(tid2items_db_fpath, "c") as tid_stream:
 
         # Create an empty dictionary to store results for tid2items
         all_tid2items = {}
@@ -67,7 +75,10 @@ for name in ['val_data','eval_data']:
         for fid, group_scores in tqdm(stream.items(), desc="Processing Items"):
 
             # Audio2Text retrieval: Create a list of tuples (tid, score, is_relevant) for each audio file
-            fid_stream[fid] = [(tid, group_scores[tid], tid2fid[tid] == fid) for tid in group_scores]
+            fid_stream[fid] = [
+                (tid, group_scores[tid], tid2fid[tid] == fid)
+                for tid in group_scores
+            ]
 
             # Text2Audio retrieval: Create a list of tuples (fid, score, is_relevant) for each text ID
             for tid, score in group_scores.items():

@@ -49,7 +49,13 @@ class AudioTextDataset(Dataset):
         text_vec = None
 
         if self.text_level == "word":
-            text_vec = torch.as_tensor([self.text_vocab(key) for key in item["tokens"] if key not in stopwords])
+            text_vec = torch.as_tensor(
+                [
+                    self.text_vocab(key)
+                    for key in item["tokens"]
+                    if key not in stopwords
+                ]
+            )
 
         elif self.text_level == "sentence":
             text_vec = torch.as_tensor([self.text_vocab(item["tid"])])
@@ -107,7 +113,11 @@ def load_data(conf, train=True):
 
     # Bootstrap pairs
     if train:
-        text_data = text_data.groupby(by=["fid"]).sample(n=1, replace=False, random_state=None).reset_index()
+        text_data = (
+            text_data.groupby(by=["fid"])
+            .sample(n=1, replace=False, random_state=None)
+            .reset_index()
+        )
 
     # Load prior embeddings (e.g., word2vec, BERT, and RoBERTa)
     embed_fpath = os.path.join(conf["dataset"], conf["text_embeds"])
@@ -125,7 +135,12 @@ def load_data(conf, train=True):
         text_vocab.add_key(key, text_embeds[key])
 
     # Enclose data
-    kwargs = {"audio_data": audio_data, "text_data": text_data, "text_vocab": text_vocab, "text_level": text_level}
+    kwargs = {
+        "audio_data": audio_data,
+        "text_data": text_data,
+        "text_vocab": text_vocab,
+        "text_level": text_level,
+    }
     dataset = AudioTextDataset(**kwargs)
 
     return dataset

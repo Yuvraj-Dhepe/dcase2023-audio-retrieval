@@ -22,7 +22,6 @@ data_conf:
         text_embeds: sbert_embeds.pkl
         text_level: sentence
 
-
 # Configure hyper-parameters
 param_conf:
     num_epoch: 100
@@ -31,7 +30,6 @@ param_conf:
     criterion: infonce_loss
     optimizer: AdamOptimizer
     lr_scheduler: ReduceLROnPlateau
-
 
 # Model definitions
 DualEncoderModel:
@@ -50,15 +48,13 @@ DualEncoderModel:
         init: prior
         out_dim: 300
 
-
 # Criteria
 criteria:
     infonce_loss:
         name: LogSoftmaxLoss
         args:
             temperature: 0.07
-            dist: dot_product  # dot_product, cosine_similarity
-
+            dist: dot_product # dot_product, cosine_similarity
 
 # Optimizer definitions
 AdamOptimizer:
@@ -66,7 +62,6 @@ AdamOptimizer:
     args:
         lr: 0.001
         weight_decay: 0.0
-
 
 # Learning rate scheduler definitions
 ReduceLROnPlateau:

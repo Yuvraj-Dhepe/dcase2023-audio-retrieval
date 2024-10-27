@@ -6,12 +6,15 @@ import librosa
 import numpy as np
 from multiprocessing import Pool
 
-def log_mel_spectrogram(y,
-                        sample_rate=44100,
-                        window_length_secs=0.025,
-                        hop_length_secs=0.010,
-                        num_mels=128,
-                        log_offset=0.0):
+
+def log_mel_spectrogram(
+    y,
+    sample_rate=44100,
+    window_length_secs=0.025,
+    hop_length_secs=0.010,
+    num_mels=128,
+    log_offset=0.0,
+):
     """Convert waveform to a log magnitude mel-frequency spectrogram.
 
     :param y: 1D np.array of waveform data.
@@ -28,10 +31,17 @@ def log_mel_spectrogram(y,
     hop_length = int(round(sample_rate * hop_length_secs))
     fft_length = 2 ** int(np.ceil(np.log(window_length) / np.log(2.0)))
 
-    mel_spectrogram = librosa.feature.melspectrogram(y=y, sr=sample_rate, n_fft=fft_length, hop_length=hop_length,
-                                                     win_length=window_length, n_mels=num_mels)
+    mel_spectrogram = librosa.feature.melspectrogram(
+        y=y,
+        sr=sample_rate,
+        n_fft=fft_length,
+        hop_length=hop_length,
+        win_length=window_length,
+        n_mels=num_mels,
+    )
 
     return np.log(mel_spectrogram + log_offset)
+
 
 def process_audio(fpath):
     fname = os.path.basename(fpath)
@@ -41,14 +51,21 @@ def process_audio(fpath):
     # Add assert statement to check if audio is mono
     assert len(y.shape) == 1, "Audio is not mono!"
 
-    log_mel = log_mel_spectrogram(y, sr, window_length_secs=0.040, hop_length_secs=0.020,
-                                  num_mels=64, log_offset=np.spacing(1))
+    log_mel = log_mel_spectrogram(
+        y,
+        sr,
+        window_length_secs=0.040,
+        hop_length_secs=0.020,
+        num_mels=64,
+        log_offset=np.spacing(1),
+    )
 
     return fid, np.vstack(log_mel).transpose()
 
+
 global_params = {
     "dataset_dir": "./data/Clotho",
-    "audio_splits": ["development", "validation", "evaluation"]
+    "audio_splits": ["development", "validation", "evaluation"],
 }
 
 # Load audio info
@@ -63,12 +80,16 @@ for split in global_params["audio_splits"]:
     fname2fid = {fid2fname[fid]: fid for fid in fid2fname}
 
     audio_dir = os.path.join(global_params["dataset_dir"], split)
-    audio_logmel = os.path.join(global_params["dataset_dir"], f"{split}_audio_logmels.hdf5")
+    audio_logmel = os.path.join(
+        global_params["dataset_dir"], f"{split}_audio_logmels.hdf5"
+    )
 
     with h5py.File(audio_logmel, "w") as stream:
 
         with Pool(processes=os.cpu_count()) as pool:
-            results = pool.map(process_audio, glob.glob(r"{}/*.wav".format(audio_dir)))
+            results = pool.map(
+                process_audio, glob.glob(r"{}/*.wav".format(audio_dir))
+            )
 
         for fid, log_mel in results:
             stream[fid] = log_mel

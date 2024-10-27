@@ -8,7 +8,15 @@ from multiprocessing import Pool
 from tqdm import tqdm  # Import tqdm for progress tracking
 from functools import partial
 
-def log_mel_spectrogram(y, sample_rate=44100, window_length_secs=0.025, hop_length_secs=0.010, num_mels=128, log_offset=0.0):
+
+def log_mel_spectrogram(
+    y,
+    sample_rate=44100,
+    window_length_secs=0.025,
+    hop_length_secs=0.010,
+    num_mels=128,
+    log_offset=0.0,
+):
     """
     Convert a waveform into a log-magnitude mel-frequency spectrogram.
 
@@ -29,12 +37,17 @@ def log_mel_spectrogram(y, sample_rate=44100, window_length_secs=0.025, hop_leng
 
     # Compute mel spectrogram
     mel_spectrogram = librosa.feature.melspectrogram(
-        y=y, sr=sample_rate, n_fft=fft_length, hop_length=hop_length,
-        win_length=window_length, n_mels=num_mels
+        y=y,
+        sr=sample_rate,
+        n_fft=fft_length,
+        hop_length=hop_length,
+        win_length=window_length,
+        n_mels=num_mels,
     )
 
     # Return the log of the mel spectrogram to make it log-magnitude
     return np.log(mel_spectrogram + log_offset)
+
 
 def process_audio(fpath, fname2fid):
     """
@@ -53,20 +66,29 @@ def process_audio(fpath, fname2fid):
         return None
 
     # Load the audio file using librosa
-    y, sr = librosa.load(fpath, sr=None, mono=True)  # sr=None keeps the original sampling rate
+    y, sr = librosa.load(
+        fpath, sr=None, mono=True
+    )  # sr=None keeps the original sampling rate
     assert len(y.shape) == 1, "Audio is not mono!"  # Ensure the audio is mono
 
     # Compute log-mel spectrogram with specific parameters
     log_mel = log_mel_spectrogram(
-        y, sr, window_length_secs=0.040, hop_length_secs=0.020,
-        num_mels=64, log_offset=np.spacing(1)
+        y,
+        sr,
+        window_length_secs=0.040,
+        hop_length_secs=0.020,
+        num_mels=64,
+        log_offset=np.spacing(1),
     )
 
     # Return the file ID and the log-mel spectrogram transposed for correct shape
     # TODO: remove stacking and once check the baseline scores are they impacted or not
     return fid, np.vstack(log_mel).transpose()
 
-def extract_log_mel_spectrograms(dataset_dirs, audio_splits, audio_fid2fname, output_dir):
+
+def extract_log_mel_spectrograms(
+    dataset_dirs, audio_splits, audio_fid2fname, output_dir
+):
     """
     Extract log-mel spectrograms for selected audio files in the given dataset splits.
 
@@ -85,7 +107,9 @@ def extract_log_mel_spectrograms(dataset_dirs, audio_splits, audio_fid2fname, ou
 
         # Get the fid-to-filename mapping for the current split
         fid2fname = audio_fid2fname[split]
-        fname2fid = {fname: fid for fid, fname in fid2fname.items()}  # Reverse the mapping to get fname -> fid
+        fname2fid = {
+            fname: fid for fid, fname in fid2fname.items()
+        }  # Reverse the mapping to get fname -> fid
 
         # Output HDF5 file path to store log-mel spectrograms
         audio_logmel = os.path.join(output_dir, f"{split}_audio_logmels.hdf5")
@@ -100,7 +124,9 @@ def extract_log_mel_spectrograms(dataset_dirs, audio_splits, audio_fid2fname, ou
                 all_wav_files.extend(glob.glob(r"{}/*.wav".format(audio_dir)))
 
             # Filter the files to only process the ones that are selected (exist in audio_info.pkl)
-            selected_wav_files = [f for f in all_wav_files if os.path.basename(f) in fname2fid]
+            selected_wav_files = [
+                f for f in all_wav_files if os.path.basename(f) in fname2fid
+            ]
 
             if not selected_wav_files:
                 print(f"No files selected for processing in {split}.")
@@ -109,21 +135,32 @@ def extract_log_mel_spectrograms(dataset_dirs, audio_splits, audio_fid2fname, ou
             # Process the selected audio files in parallel using multiprocessing Pool
             with Pool(processes=os.cpu_count()) as pool:
                 # Use partial to pass fname2fid as an additional argument to process_audio
-                process_audio_with_fname2fid = partial(process_audio, fname2fid=fname2fid)
+                process_audio_with_fname2fid = partial(
+                    process_audio, fname2fid=fname2fid
+                )
 
                 # Use tqdm to track the progress of audio file processing
-                results = list(tqdm(pool.imap(process_audio_with_fname2fid, selected_wav_files),
-                                    total=len(selected_wav_files),
-                                    desc=f"Processing selected audio files in {split}"))
+                results = list(
+                    tqdm(
+                        pool.imap(
+                            process_audio_with_fname2fid, selected_wav_files
+                        ),
+                        total=len(selected_wav_files),
+                        desc=f"Processing selected audio files in {split}",
+                    )
+                )
 
             # Save the processed log-mel spectrograms to the HDF5 file
             for result in results:
                 if result is not None:
                     fid, log_mel = result
-                    stream[fid] = log_mel  # Save the log-mel spectrogram under its fid
+                    stream[fid] = (
+                        log_mel  # Save the log-mel spectrogram under its fid
+                    )
 
         print(f"Saved log-mel spectrograms to {audio_logmel}")
-        print('=' * 90)
+        print("=" * 90)
+
 
 def load_audio_info(audio_info_path):
     """
@@ -135,20 +172,27 @@ def load_audio_info(audio_info_path):
     with open(audio_info_path, "rb") as store:
         return pickle.load(store)
 
+
 # Main execution
 if __name__ == "__main__":
     global_params = {
         # List of dataset directories (for both original and synthetic data)
         "dataset_dirs": [
-            "./data/Clotho", "./data/Clotho_caption_1", "./data/Clotho_caption_2",
-            "./data/Clotho_caption_3", "./data/Clotho_caption_4", "./data/Clotho_caption_5"
+            "./data/Clotho",
+            "./data/Clotho_caption_1",
+            "./data/Clotho_caption_2",
+            "./data/Clotho_caption_3",
+            "./data/Clotho_caption_4",
+            "./data/Clotho_caption_5",
         ],
         # Audio splits to process
-        "audio_splits": ["development", "validation", "evaluation"]
+        "audio_splits": ["development", "validation", "evaluation"],
     }
 
     # Directory to save the output
-    output_dir = './data/exp_5'
+    replication_factor = 1  # User-defined value for how many times to pick from synthetic copies (1 to 5)
+
+    output_dir = f"./data/exp_{replication_factor}"
 
     # Path to the pickle file containing audio file info
     audio_info_path = os.path.join(output_dir, "audio_info.pkl")
@@ -157,4 +201,9 @@ if __name__ == "__main__":
     audio_data = load_audio_info(audio_info_path)
 
     # Extract the log-mel spectrograms for the selected audio files
-    extract_log_mel_spectrograms(global_params["dataset_dirs"], global_params["audio_splits"], audio_data["audio_fid2fname"], output_dir)
+    extract_log_mel_spectrograms(
+        global_params["dataset_dirs"],
+        global_params["audio_splits"],
+        audio_data["audio_fid2fname"],
+        output_dir,
+    )

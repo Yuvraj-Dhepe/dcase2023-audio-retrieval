@@ -10,14 +10,21 @@ class SentBERTBaseEncoder(nn.Module):
         super(SentBERTBaseEncoder, self).__init__()
 
         # Embeddings
-        self.embedding = nn.Embedding(num_embeddings=kwargs["num_embed"], embedding_dim=768, _weight=kwargs["weight"])
+        self.embedding = nn.Embedding(
+            num_embeddings=kwargs["num_embed"],
+            embedding_dim=768,
+            _weight=kwargs["weight"],
+        )
 
         # Freeze embeddings
         for param in self.embedding.parameters():
             param.requires_grad = False
 
-        self.fc = nn.Linear(768, kwargs["out_dim"], bias=True)
-        self.fc.apply(init_weights)
+        self.fc1 = nn.Linear(768, 512, bias=True)
+        self.dropout = nn.Dropout(p=0.2)
+        self.fc2 = nn.Linear(512, kwargs["out_dim"], bias=True)
+        self.fc1.apply(init_weights)
+        self.fc2.apply(init_weights)
 
     def forward(self, x):
         """
@@ -28,6 +35,8 @@ class SentBERTBaseEncoder(nn.Module):
 
         x = torch.mean(x, dim=1, keepdim=False)
 
-        x = self.fc(x)
+        x = self.fc1(x)
+        x = self.dropout(x)
+        x = self.fc2(x)
 
         return x

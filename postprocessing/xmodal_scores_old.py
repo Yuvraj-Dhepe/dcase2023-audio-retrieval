@@ -51,7 +51,13 @@ for name, ds in zip(["train", "val", "eval"], [train_ds, val_ds, eval_ds]):
         item = ds.text_data.loc[idx]
 
         if ds.text_level == "word":
-            text_vec = torch.as_tensor([ds.text_vocab(key) for key in item["tokens"] if key not in stopwords])
+            text_vec = torch.as_tensor(
+                [
+                    ds.text_vocab(key)
+                    for key in item["tokens"]
+                    if key not in stopwords
+                ]
+            )
             text2vec[item["tid"]] = torch.unsqueeze(text_vec, dim=0)
 
         elif ds.text_level == "sentence":
@@ -70,8 +76,14 @@ for name, ds in zip(["train", "val", "eval"], [train_ds, val_ds, eval_ds]):
             audio_embed = model.audio_branch(audio_vec)[0]
 
             for tid in text2vec:
-                text_embed = model.text_branch(text2vec[tid])[0]  # Encode text data
-                xmodal_S = criterion_utils.score(audio_embed, text_embed, obj_params["args"].get("dist", "dot_product"))
+                text_embed = model.text_branch(text2vec[tid])[
+                    0
+                ]  # Encode text data
+                xmodal_S = criterion_utils.score(
+                    audio_embed,
+                    text_embed,
+                    obj_params["args"].get("dist", "dot_product"),
+                )
                 group_scores[tid] = xmodal_S.item()
             stream[fid] = group_scores
     print("Save", score_fpath)

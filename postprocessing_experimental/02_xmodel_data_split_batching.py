@@ -77,7 +77,7 @@ for name in data_conf.keys():
             fid_stream[fid] = fid_items  # Save directly into shelve
 
             # Text2Audio retrieval: Process in small batches to avoid large memory usage
-            # NOTE: This is extremely slow as .db files are hell in frequent writes.
+            # NOTE: This is extremely slow as .db files are pretty slow in frequent writes.
             for tid, score in group_scores.items():
                 if tid not in tid_stream:
                     tid_stream[tid] = []

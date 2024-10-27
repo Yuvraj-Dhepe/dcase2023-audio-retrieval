@@ -14,7 +14,7 @@ dbm._defaultmod = dumb
 dbm._modules = {"dbm.dumb": dumb}
 
 # Load configuration from conf.yaml
-cap_col_num, run_num = '1x', 5
+cap_col_num, run_num = "1x", 5
 
 with open(f"./conf_yamls/cap_{cap_col_num}_conf.yaml", "rb") as stream:
     conf = yaml.full_load(stream)
@@ -24,16 +24,19 @@ wandb_conf = conf.get("wandb_conf", {})
 
 # Get the latest WandB run directory
 api = wandb.Api()
-runs = api.runs(wandb_conf['project'])  # Replace with your actual project name
+runs = api.runs(wandb_conf["project"])  # Replace with your actual project name
 latest_run = runs[len(runs) - run_num]
 
 # Construct the checkpoint directory path
-print(f"\nInitializing Run ID: {latest_run.id} && Run Name: {latest_run.name}\n")
+print(
+    f"\nInitializing Run ID: {latest_run.id} && Run Name: {latest_run.name}\n"
+)
 
 ckp_fpath = os.path.join("./z_ckpts", latest_run.id)
 
 # Extract data configuration
 data_conf = conf["data_conf"]
+
 
 # Function to batch save items to shelve
 def batch_save_to_shelve(shelve_db, data_batch, append_mode=False):
@@ -51,6 +54,7 @@ def batch_save_to_shelve(shelve_db, data_batch, append_mode=False):
             shelve_db[key] = value
     data_batch.clear()  # Clear the batch after saving to shelve
 
+
 # Iterate through datasets
 for name in data_conf.keys():
     params = data_conf[name]
@@ -58,7 +62,9 @@ for name in data_conf.keys():
 
     # Load text data in chunks to minimize memory usage
     text_fpath = os.path.join(params["dataset"], params["text_data"])
-    text_data_iterator = pd.read_csv(text_fpath, converters={"tokens": literal_eval}, chunksize=5000)
+    text_data_iterator = pd.read_csv(
+        text_fpath, converters={"tokens": literal_eval}, chunksize=5000
+    )
     print("\n\nLoaded", text_fpath)
 
     # Initialize mappings with defaultdict to minimize memory usage
@@ -79,8 +85,12 @@ for name in data_conf.keys():
     score_fpath = os.path.join(ckp_fpath, f"{name}_xmodal_scores.db")
 
     # Initialize shelve databases for storage
-    fid2items_db_fpath = os.path.join(ckp_fpath, f"{name}_fid_2_items_optimized.db")
-    tid2items_db_fpath = os.path.join(ckp_fpath, f"{name}_tid_2_items_optimized.db")
+    fid2items_db_fpath = os.path.join(
+        ckp_fpath, f"{name}_fid_2_items_optimized.db"
+    )
+    tid2items_db_fpath = os.path.join(
+        ckp_fpath, f"{name}_tid_2_items_optimized.db"
+    )
 
     # Delete the files if they exist
     if os.path.exists(fid2items_db_fpath):
@@ -88,15 +98,22 @@ for name in data_conf.keys():
     if os.path.exists(tid2items_db_fpath):
         os.remove(tid2items_db_fpath)
 
-    with shelve.open(score_fpath) as stream, shelve.open(fid2items_db_fpath, 'c') as fid_stream, shelve.open(tid2items_db_fpath, 'c') as tid_stream:
+    with shelve.open(score_fpath) as stream, shelve.open(
+        fid2items_db_fpath, "c"
+    ) as fid_stream, shelve.open(tid2items_db_fpath, "c") as tid_stream:
 
         ### Phase 1: Process and save fid_stream ###
         fid_batch = {}
         fid_batch_size = 3000  # Adjust fid batch size
 
         # Process fid_stream in batches
-        for fid, group_scores in tqdm(stream.items(), desc="Processing fid_stream"):
-            fid_batch[fid] = [(tid, group_scores[tid], tid2fid[tid] == fid) for tid in group_scores]
+        for fid, group_scores in tqdm(
+            stream.items(), desc="Processing fid_stream"
+        ):
+            fid_batch[fid] = [
+                (tid, group_scores[tid], tid2fid[tid] == fid)
+                for tid in group_scores
+            ]
 
             # Once the fid batch size is reached, flush to shelve
             if len(fid_batch) >= fid_batch_size:
@@ -109,11 +126,15 @@ for name in data_conf.keys():
 
         ### Phase 2: Process and save tid_stream ###
         tid_batch = {}
-        tid_batch_size = 1000  # Adjust tid batch size (smaller for less memory usage)
+        tid_batch_size = (
+            1000  # Adjust tid batch size (smaller for less memory usage)
+        )
 
         # NOTE: This is again damn slow
         # Re-iterate over stream for tid_stream processing
-        for fid, group_scores in tqdm(stream.items(), desc="Processing tid_stream"):
+        for fid, group_scores in tqdm(
+            stream.items(), desc="Processing tid_stream"
+        ):
             for tid, score in group_scores.items():
                 if tid not in tid_batch:
                     tid_batch[tid] = []

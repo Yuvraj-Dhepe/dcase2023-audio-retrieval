@@ -7,13 +7,15 @@ from tqdm import tqdm
 
 global_params = {
     "dataset_dir": "./data/Clotho_caption_5",
-    "audio_splits": ["development", "validation", "evaluation"]
+    "audio_splits": ["development", "validation", "evaluation"],
 }
 
 model_name = "sbert"
 # Create model and move it to the device
 # By default model will be put on GPU if available.
-model = SentenceTransformer('all-mpnet-base-v2')
+model = SentenceTransformer("all-mpnet-base-v2")
+
+
 def generate_text_embeddings(dataset_dir, audio_splits, model):
     """
     Generates text embeddings for captions using a SentenceTransformer model.
@@ -32,13 +34,16 @@ def generate_text_embeddings(dataset_dir, audio_splits, model):
         text_fpath = os.path.join(dataset_dir, f"{split}_text.csv")
         text_data = pd.read_csv(text_fpath)
 
-        for i in tqdm(text_data.index, desc=f"Generating embeddings for {split}"):
+        for i in tqdm(
+            text_data.index, desc=f"Generating embeddings for {split}"
+        ):
             tid = text_data.loc[i].tid
             raw_text = text_data.loc[i].raw_text
 
             text_embeds[tid] = model.encode(raw_text)
 
     return text_embeds
+
 
 def save_text_embeddings(embed_fpath, text_embeds):
     """
@@ -53,10 +58,15 @@ def save_text_embeddings(embed_fpath, text_embeds):
 
     print("Save text embeddings to", embed_fpath)
 
+
 # Main execution
 if __name__ == "__main__":
-    text_embeddings = generate_text_embeddings(global_params["dataset_dir"], global_params["audio_splits"], model)
+    text_embeddings = generate_text_embeddings(
+        global_params["dataset_dir"], global_params["audio_splits"], model
+    )
 
     # Save text embeddings
-    embed_fpath = os.path.join(global_params["dataset_dir"], f"{model_name}_embeds.pkl")
+    embed_fpath = os.path.join(
+        global_params["dataset_dir"], f"{model_name}_embeds.pkl"
+    )
     save_text_embeddings(embed_fpath, text_embeddings)

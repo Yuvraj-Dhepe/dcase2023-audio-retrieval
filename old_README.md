@@ -53,6 +53,7 @@ preprocessing
 ├─ 03_sbert_embeddings.py          # generate sentence embeddings using Sentence-BERT (all-mpnet-base-v2)
 └─ 04_cnn14_transfer.py            # transfer pretrained CNN14 (Cnn14_mAP=0.431.pth)
 ```
+
 ```
 01_clotho_dataset.py:
     - Takes in dataset directory, and generates random fid mapping for the fnames for each split. Produces a single audio_info.pkl for all splits
@@ -60,12 +61,11 @@ preprocessing
     - Takes in the {split}_text.csv files and generates data statistics for all splits. Produces a single file of vocab_info.pkl
 ```
 
-
 4. Train the baseline system:
+
 - Run main_wandb.py for tracking results in wanbdmain.py or
 - Run new_main.py an updated version of main.py, however, it throws some ray error, which needs to be corrected
 - Get the audio encoder weights from the PANNS zenodo [link](https://zenodo.org/records/3987831), download the Cnn14_mAP=0.431.pth weights, or directly use `wget https://zenodo.org/records/3987831/files/Cnn14_mAP%3D0.431.pth?download=1` and put it in pretrained models by naming it as cnn14.pth
-
 
 ```
 models
@@ -84,7 +84,8 @@ main_wandb.py                   # Running main where results are tracked in wand
 ```
 
 5. Calculate retrieval metrics:
-`Run the files in the given sr. no order, can run wanbd alternatives to track metrics in wandb`
+   `Run the files in the given sr. no order, can run wanbd alternatives to track metrics in wandb`
+
 ```
 postprocessing
 ├─ 01_xmodal_scores.py             # calculate audio-text scores and store in a .db for each split
@@ -104,36 +105,38 @@ example
 └─ audio_encoder.pth            # audio encoder checkpoint (https://doi.org/10.5281/zenodo.7752975)
 ```
 
-
 ### CAPTION CORRECTIONS:
+
 Following captions were cleaned from all the data split caption files
+
 - echos replaced with echoes
 - removal of double-spaces
 - NOTE: Some captions have words spelled in British English form: for example
-    > Gravelled (British) <-> Graveled (American)
-    > Neighbourhood (British) <-> Neighborhood (American)
-    > Signalling (British) <-> Signaling (American)
-    We keep them as is.
+  > Gravelled (British) <-> Graveled (American)
+  > Neighbourhood (British) <-> Neighborhood (American)
+  > Signalling (British) <-> Signaling (American)
+  > We keep them as is.
 - removal of double words like `a a`, `the the` `busy busy`, `to to`, `on on`, 'bicycle bicycle' where there was no context for the words presence
 
 ### Audio filename corrections in csv and wav folders
+
 - Removal of extra spaces from the first 2 wav files in development folder, 1 wav file in validation folder and their correspondance in .csv file
 -
 
 ### SIDE NOTES
+
 - Can try to use GPU for getting logmels & sbert embeddings.
 - Use cosine similarity and then check the scores
 - Iteratively take caption generated audios, calculate scores individually for each of them.
 
-
-
 ### Results:
-1) Input Processsings:
-    - Logmels: Multiprocessing CPU & Librosa
-    - Sbert embeddings: GPU
 
-2) Model Params:
-    - Embedding dimensions of audio encoders and text encoders, can we have it more than 300?
+1. Input Processsings:
 
+   - Logmels: Multiprocessing CPU & Librosa
+   - Sbert embeddings: GPU
+
+2. Model Params:
+   - Embedding dimensions of audio encoders and text encoders, can we have it more than 300?
 
 |Sr.no|Logmels|Sbert|No_embeddings|Cap_gen_Col|eval_A2T_map|

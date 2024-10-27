@@ -1,6 +1,6 @@
 # Custom Files
 data/
-tmp/
+temp/
 wandb/
 z_ckpts/
 pretrained_models/*.pth

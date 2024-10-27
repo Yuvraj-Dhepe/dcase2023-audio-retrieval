@@ -1,0 +1,44 @@
+sweep:
+  name: "audio_dl_baseline_sweep"
+  method: bayes
+  metric:
+    name: "val_obj"
+    goal: minimize
+
+  early_terminate:
+    type: hyperband # Early stopping with a HyperBand approach
+    min_iter: 10 # Minimum epochs to run before stopping
+    max_iter: 50 # Maximum epochs
+    s: 2 # Reduction factor for HyperBand stopping criteria
+
+  parameters:
+    lr:
+      distribution: log_uniform
+      min: 0.0001
+      max: 0.01
+
+    batch_size:
+      values: [64, 128, 256]
+
+    num_epoch:
+      values: [50] # Fixed epoch count
+
+    # Individual parameters for each trainable block
+    bn_block:
+      values: [True, False]
+    conv_block1:
+      values: [True, False]
+    conv_block2:
+      values: [True, False]
+    conv_block3:
+      values: [True, False]
+    conv_block4:
+      values: [True, False]
+    conv_block5:
+      values: [True, False]
+    conv_block6:
+      values: [True, False]
+    fc_block:
+      values: [True, False]
+
+program: main_wandb_new.py

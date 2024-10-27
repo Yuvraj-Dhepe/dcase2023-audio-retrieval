@@ -17,9 +17,11 @@ wandb_conf = conf.get("wandb_conf", {})
 
 # Get the latest WandB run directory
 api = wandb.Api()
-runs = api.runs(wandb_conf['project'])  # Replace with your actual project name
-latest_run = runs[len(runs)-run_num]
-print(f"\nInitializing Run ID: {latest_run.id} && Run Name: {latest_run.name}\n")
+runs = api.runs(wandb_conf["project"])  # Replace with your actual project name
+latest_run = runs[len(runs) - run_num]
+print(
+    f"\nInitializing Run ID: {latest_run.id} && Run Name: {latest_run.name}\n"
+)
 # wandb.init(project=wandb_conf['project'], id=latest_run.id)
 
 # Construct the checkpoint directory path
@@ -27,6 +29,7 @@ ckp_fpath = os.path.join("./z_ckpts", latest_run.id)
 
 # Extract data configuration
 data_conf = conf["data_conf"]
+
 
 def measure_single_item(qid, items, dataset_name, way):
     """
@@ -50,19 +53,36 @@ def measure_single_item(qid, items, dataset_name, way):
     targets = np.take_along_axis(arr=targets, indices=desc_indices, axis=-1)
 
     # Calculate recall at cutoffs 1, 5, and 10
-    R1 = np.sum(targets[:1], dtype=float) / np.sum(targets, dtype=float) if np.sum(targets) > 0 else 0.0
-    R5 = np.sum(targets[:5], dtype=float) / np.sum(targets, dtype=float) if np.sum(targets) > 0 else 0.0
-    R10 = np.sum(targets[:10], dtype=float) / np.sum(targets, dtype=float) if np.sum(targets) > 0 else 0.0
+    R1 = (
+        np.sum(targets[:1], dtype=float) / np.sum(targets, dtype=float)
+        if np.sum(targets) > 0
+        else 0.0
+    )
+    R5 = (
+        np.sum(targets[:5], dtype=float) / np.sum(targets, dtype=float)
+        if np.sum(targets) > 0
+        else 0.0
+    )
+    R10 = (
+        np.sum(targets[:10], dtype=float) / np.sum(targets, dtype=float)
+        if np.sum(targets) > 0
+        else 0.0
+    )
 
     # Calculate mean average precision (mAP)
     positions = np.arange(1, 11, dtype=float)[targets[:10] > 0]
     if len(positions) > 0:
-        precisions = np.divide(np.arange(1, len(positions) + 1, dtype=float), positions)
-        avg_precision = np.sum(precisions, dtype=float) / np.sum(targets, dtype=float)
+        precisions = np.divide(
+            np.arange(1, len(positions) + 1, dtype=float), positions
+        )
+        avg_precision = np.sum(precisions, dtype=float) / np.sum(
+            targets, dtype=float
+        )
     else:
         avg_precision = 0.0
 
     return R1, R5, R10, avg_precision
+
 
 def process_db_on_the_fly(db_path, dataset_name):
     """
@@ -76,8 +96,18 @@ def process_db_on_the_fly(db_path, dataset_name):
         None. Prints metrics and saves results.
     """
     # Initialize totals for Audio2Text and Text2Audio
-    fid2_total_R1, fid2_total_R5, fid2_total_R10, fid2_total_mAP = 0.0, 0.0, 0.0, 0.0
-    tid2_total_R1, tid2_total_R5, tid2_total_R10, tid2_total_mAP = 0.0, 0.0, 0.0, 0.0
+    fid2_total_R1, fid2_total_R5, fid2_total_R10, fid2_total_mAP = (
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+    )
+    tid2_total_R1, tid2_total_R5, tid2_total_R10, tid2_total_mAP = (
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+    )
     fid2_count, tid2_count = 0, 0
 
     # Connect to the SQLite database
@@ -85,12 +115,16 @@ def process_db_on_the_fly(db_path, dataset_name):
     cursor = conn.cursor()
 
     # Process each row in the database
-    cursor.execute("SELECT fid, tid, score FROM cross_modal_scores")  # Adjust table/column names if needed
+    cursor.execute(
+        "SELECT fid, tid, score FROM cross_modal_scores"
+    )  # Adjust table/column names if needed
     fid2items, tid2items = {}, {}
 
     # Retrieve each row from the database in a loop
-    for fid, tid, score in tqdm(cursor.fetchall(), desc=f"Processing {dataset_name}"):
-        is_relevant = (tid2fid[tid] == fid)
+    for fid, tid, score in tqdm(
+        cursor.fetchall(), desc=f"Processing {dataset_name}"
+    ):
+        is_relevant = tid2fid[tid] == fid
 
         # Group items by fid for Audio2Text
         fid2items.setdefault(fid, []).append((tid, score, is_relevant))
@@ -100,7 +134,9 @@ def process_db_on_the_fly(db_path, dataset_name):
 
     # Measure Audio2Text retrieval
     for fid, items in fid2items.items():
-        R1, R5, R10, mAP = measure_single_item(fid, items, dataset_name, 'Audio2Txt')
+        R1, R5, R10, mAP = measure_single_item(
+            fid, items, dataset_name, "Audio2Txt"
+        )
         fid2_total_R1 += R1
         fid2_total_R5 += R5
         fid2_total_R10 += R10
@@ -109,7 +145,9 @@ def process_db_on_the_fly(db_path, dataset_name):
 
     # Measure Text2Audio retrieval
     for tid, items in tid2items.items():
-        R1, R5, R10, mAP = measure_single_item(tid, items, dataset_name, 'Txt2Audio')
+        R1, R5, R10, mAP = measure_single_item(
+            tid, items, dataset_name, "Txt2Audio"
+        )
         tid2_total_R1 += R1
         tid2_total_R5 += R5
         tid2_total_R10 += R10
@@ -121,23 +159,28 @@ def process_db_on_the_fly(db_path, dataset_name):
     avg_fid2_R5 = fid2_total_R5 / fid2_count if fid2_count > 0 else 0.0
     avg_fid2_R10 = fid2_total_R10 / fid2_count if fid2_count > 0 else 0.0
     avg_fid2_mAP = fid2_total_mAP / fid2_count if fid2_count > 0 else 0.0
-    print(f"{dataset_name} Audio2Txt mAP: {avg_fid2_mAP:.3f}",
-          f"R1: {avg_fid2_R1:.3f}",
-          f"R5: {avg_fid2_R5:.3f}",
-          f"R10: {avg_fid2_R10:.3f}")
+    print(
+        f"{dataset_name} Audio2Txt mAP: {avg_fid2_mAP:.3f}",
+        f"R1: {avg_fid2_R1:.3f}",
+        f"R5: {avg_fid2_R5:.3f}",
+        f"R10: {avg_fid2_R10:.3f}",
+    )
 
     # Calculate and print average metrics for Text2Audio
     avg_tid2_R1 = tid2_total_R1 / tid2_count if tid2_count > 0 else 0.0
     avg_tid2_R5 = tid2_total_R5 / tid2_count if tid2_count > 0 else 0.0
     avg_tid2_R10 = tid2_total_R10 / tid2_count if tid2_count > 0 else 0.0
     avg_tid2_mAP = tid2_total_mAP / tid2_count if tid2_count > 0 else 0.0
-    print(f"{dataset_name} Txt2Audio mAP: {avg_tid2_mAP:.3f}",
-          f"R1: {avg_tid2_R1:.3f}",
-          f"R5: {avg_tid2_R5:.3f}",
-          f"R10: {avg_tid2_R10:.3f}")
+    print(
+        f"{dataset_name} Txt2Audio mAP: {avg_tid2_mAP:.3f}",
+        f"R1: {avg_tid2_R1:.3f}",
+        f"R5: {avg_tid2_R5:.3f}",
+        f"R10: {avg_tid2_R10:.3f}",
+    )
 
     # Close the database connection
     conn.close()
+
 
 if __name__ == "__main__":
     # Iterate through datasets
@@ -147,7 +190,9 @@ if __name__ == "__main__":
 
         # Load text data
         text_fpath = os.path.join(params["dataset"], params["text_data"])
-        text_data = pd.read_csv(text_fpath, converters={"tokens": literal_eval})
+        text_data = pd.read_csv(
+            text_fpath, converters={"tokens": literal_eval}
+        )
         print("\n\nLoaded", text_fpath)
 
         # Create mappings for text IDs, file IDs, and filenames

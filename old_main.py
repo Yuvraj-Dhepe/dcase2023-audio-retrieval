@@ -24,28 +24,44 @@ def exec_trial(conf, ckp_dir=None):
     param_conf = conf["param_conf"]
 
     train_ds = data_utils.load_data(data_conf["train_data"])
-    train_dl = DataLoader(dataset=train_ds, batch_size=param_conf["batch_size"],
-                          shuffle=True, collate_fn=data_utils.collate_fn)
+    train_dl = DataLoader(
+        dataset=train_ds,
+        batch_size=param_conf["batch_size"],
+        shuffle=True,
+        collate_fn=data_utils.collate_fn,
+    )
 
     val_ds = data_utils.load_data(data_conf["val_data"])
-    val_dl = DataLoader(dataset=val_ds, batch_size=param_conf["batch_size"],
-                        shuffle=True, collate_fn=data_utils.collate_fn)
+    val_dl = DataLoader(
+        dataset=val_ds,
+        batch_size=param_conf["batch_size"],
+        shuffle=True,
+        collate_fn=data_utils.collate_fn,
+    )
 
     model_params = conf[param_conf["model"]]
     model = model_utils.init_model(model_params, train_ds.text_vocab)
     print(model)
 
     obj_params = conf["criteria"][param_conf["criterion"]]
-    objective = getattr(criterion_utils, obj_params["name"], None)(**obj_params["args"])
+    objective = getattr(criterion_utils, obj_params["name"], None)(
+        **obj_params["args"]
+    )
 
     optim_params = conf[param_conf["optimizer"]]
-    optimizer = getattr(optim, optim_params["name"], None)(model.parameters(), **optim_params["args"])
+    optimizer = getattr(optim, optim_params["name"], None)(
+        model.parameters(), **optim_params["args"]
+    )
 
     lr_params = conf[param_conf["lr_scheduler"]]
-    lr_scheduler = getattr(optim.lr_scheduler, lr_params["name"], "ReduceLROnPlateau")(optimizer, **lr_params["args"])
+    lr_scheduler = getattr(
+        optim.lr_scheduler, lr_params["name"], "ReduceLROnPlateau"
+    )(optimizer, **lr_params["args"])
 
     if ckp_dir is not None:
-        model_state, optimizer_state = torch.load(os.path.join(ckp_dir, "checkpoint"))
+        model_state, optimizer_state = torch.load(
+            os.path.join(ckp_dir, "checkpoint")
+        )
         model.load_state_dict(model_state)
         optimizer.load_state_dict(optimizer_state)
 
@@ -57,7 +73,9 @@ def exec_trial(conf, ckp_dir=None):
             model_utils.train(model, train_dl, objective, optimizer)
 
         epoch_results = {}
-        epoch_results["train_obj"] = model_utils.eval(model, train_dl, objective)
+        epoch_results["train_obj"] = model_utils.eval(
+            model, train_dl, objective
+        )
         epoch_results["val_obj"] = model_utils.eval(model, val_dl, objective)
 
         epoch_results["stop_metric"] = epoch_results["val_obj"]
@@ -75,12 +93,20 @@ def exec_trial(conf, ckp_dir=None):
 
         # Reload data (Pair Bootstrapping)
         train_ds = data_utils.load_data(data_conf["train_data"])
-        train_dl = DataLoader(dataset=train_ds, batch_size=param_conf["batch_size"],
-                              shuffle=True, collate_fn=data_utils.collate_fn)
+        train_dl = DataLoader(
+            dataset=train_ds,
+            batch_size=param_conf["batch_size"],
+            shuffle=True,
+            collate_fn=data_utils.collate_fn,
+        )
 
         val_ds = data_utils.load_data(data_conf["val_data"])
-        val_dl = DataLoader(dataset=val_ds, batch_size=param_conf["batch_size"],
-                            shuffle=True, collate_fn=data_utils.collate_fn)
+        val_dl = DataLoader(
+            dataset=val_ds,
+            batch_size=param_conf["batch_size"],
+            shuffle=True,
+            collate_fn=data_utils.collate_fn,
+        )
 
 
 # Main
@@ -92,22 +118,23 @@ if __name__ == "__main__":
     # Configure ray-tune clusters
     ray_conf = conf["ray_conf"]
     ray.init(**ray_conf["init_args"])
-    trial_stopper = getattr(tune.stopper, ray_conf["trial_stopper"], TrialPlateauStopper)(**ray_conf["stopper_args"])
-    trial_reporter = CLIReporter(max_report_frequency=60, print_intermediate_tables=True)
+    trial_stopper = getattr(
+        tune.stopper, ray_conf["trial_stopper"], TrialPlateauStopper
+    )(**ray_conf["stopper_args"])
+    trial_reporter = CLIReporter(
+        max_report_frequency=60, print_intermediate_tables=True
+    )
 
     for metric in ["train_obj", "val_obj", "stop_metric"]:
         trial_reporter.add_metric_column(metric=metric)
-
 
     def trial_name_creator(trial):
         trial_name = "_".join([conf["param_conf"]["model"], trial.trial_id])
         return trial_name
 
-
     def trial_dirname_creator(trial):
         trial_dirname = "_".join([time.strftime("%Y-%m-%d"), trial.trial_id])
         return trial_dirname
-
 
     # Execute trials - local_dir/exp_name/trial_name
     analysis = tune.run(
@@ -127,16 +154,21 @@ if __name__ == "__main__":
         trial_dirname_creator=trial_dirname_creator,
         fail_fast=False,
         reuse_actors=True,
-        raise_on_failed_trial=True
+        raise_on_failed_trial=True,
     )
 
     # Check best trial
-    best_trial = analysis.get_best_trial(metric=ray_conf["stopper_args"]["metric"],
-                                         mode=ray_conf["stopper_args"]["mode"], scope="all")
+    best_trial = analysis.get_best_trial(
+        metric=ray_conf["stopper_args"]["metric"],
+        mode=ray_conf["stopper_args"]["mode"],
+        scope="all",
+    )
     print("Best trial:", best_trial.trial_id)
 
     # Check best checkpoint
-    best_ckp = analysis.get_best_checkpoint(trial=best_trial, metric=ray_conf["stopper_args"]["metric"],
-                                            mode=ray_conf["stopper_args"]["mode"])
+    best_ckp = analysis.get_best_checkpoint(
+        trial=best_trial,
+        metric=ray_conf["stopper_args"]["metric"],
+        mode=ray_conf["stopper_args"]["mode"],
+    )
     print("Best checkpoint:", best_ckp)
-

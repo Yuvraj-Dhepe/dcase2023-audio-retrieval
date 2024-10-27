@@ -1,7 +1,10 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
-def plot_dtw_score_distribution(csv_path, plot_title, similarity_threshold, output_path, col_num):
+
+def plot_dtw_score_distribution(
+    csv_path, plot_title, similarity_threshold, output_path, col_num
+):
     """
     Function to plot score distribution from a CSV file and display the number of
     'very similar' audios based on a given threshold.
@@ -21,27 +24,36 @@ def plot_dtw_score_distribution(csv_path, plot_title, similarity_threshold, outp
     plot_title = f"{plot_title} for column {col_num}"
     # Plot the distribution of similarity scores
     plt.figure(figsize=(6, 4))
-    plt.hist(df['similarity_score'], bins=50, alpha=0.75)
+    plt.hist(df["similarity_score"], bins=50, alpha=0.75)
     plt.title(plot_title)
     plt.xlabel(xlabel)
-    plt.ylabel('Frequency')
+    plt.ylabel("Frequency")
 
     # Count the number of audios that are very similar
-    very_similar_count = (df['similarity_score'] < similarity_threshold).sum()
+    very_similar_count = (df["similarity_score"] < similarity_threshold).sum()
 
     # Display the count of very similar audios and threshold on the plot
-    plt.text(0.95, 0.95, f'Very Similar Samples: {very_similar_count}\nThreshold: {similarity_threshold}',
-             fontsize=9, color='black', transform=plt.gca().transAxes,
-             verticalalignment='top', horizontalalignment='right')
+    plt.text(
+        0.95,
+        0.95,
+        f"Very Similar Samples: {very_similar_count}\nThreshold: {similarity_threshold}",
+        fontsize=9,
+        color="black",
+        transform=plt.gca().transAxes,
+        verticalalignment="top",
+        horizontalalignment="right",
+    )
 
     # Save the plot
-    plt.savefig(output_path, bbox_inches='tight', format='svg')
+    plt.savefig(output_path, bbox_inches="tight", format="svg")
 
     # Show the plot
     plt.show()
 
 
-def plot_wcc_score_distribution(csv_path, plot_title, similarity_threshold, output_path, col_num):
+def plot_wcc_score_distribution(
+    csv_path, plot_title, similarity_threshold, output_path, col_num
+):
     """
     Function to plot the correlation score distribution from a CSV file and display
     the count of 'very similar' and 'negative correlation' audios based on given thresholds.
@@ -61,33 +73,47 @@ def plot_wcc_score_distribution(csv_path, plot_title, similarity_threshold, outp
     plot_title = f"{plot_title} for column {col_num}"
     # Plot the distribution of similarity scores
     plt.figure(figsize=(6, 4))
-    plt.hist(df['similarity_score'], bins=50, alpha=0.75)
+    plt.hist(df["similarity_score"], bins=50, alpha=0.75)
     plt.title(plot_title)
     plt.xlabel(xlabel)
-    plt.ylabel('Frequency')
+    plt.ylabel("Frequency")
 
     # Count the number of audios that are very similar
-    very_similar_count = (df['similarity_score'] < similarity_threshold).sum()
+    very_similar_count = (df["similarity_score"] < similarity_threshold).sum()
 
     # Count the number of audios with scores beyond 1 (indicating potential negative correlation)
-    negative_correlation_count = (df['similarity_score'] > 1).sum()
+    negative_correlation_count = (df["similarity_score"] > 1).sum()
 
     # Display the counts of very similar audios and negative correlation on the plot
-    plt.text(0.95, 0.95, f'Very Similar Samples: {very_similar_count}\nNegative Correlation Samples: {negative_correlation_count}\nThreshold: {similarity_threshold}',
-             fontsize=9, color='black', transform=plt.gca().transAxes,
-             verticalalignment='top', horizontalalignment='right')
+    plt.text(
+        0.95,
+        0.95,
+        f"Very Similar Samples: {very_similar_count}\nNegative Correlation Samples: {negative_correlation_count}\nThreshold: {similarity_threshold}",
+        fontsize=9,
+        color="black",
+        transform=plt.gca().transAxes,
+        verticalalignment="top",
+        horizontalalignment="right",
+    )
 
     # Save the plot
-    plt.savefig(output_path, bbox_inches='tight', format='svg')
+    plt.savefig(output_path, bbox_inches="tight", format="svg")
 
     # Show the plot
     plt.show()
 
     # Print the counts for logging purposes
-    print(f'Number of audios that are very similar (score < {similarity_threshold}): {very_similar_count}')
-    print(f'Number of audios with negative correlation (score > 1): {negative_correlation_count}')
+    print(
+        f"Number of audios that are very similar (score < {similarity_threshold}): {very_similar_count}"
+    )
+    print(
+        f"Number of audios with negative correlation (score > 1): {negative_correlation_count}"
+    )
 
-def plot_embed_score_distribution(csv_path, plot_title, similarity_threshold, output_path,col_num):
+
+def plot_embed_score_distribution(
+    csv_path, plot_title, similarity_threshold, output_path, col_num
+):
     """
     Function to plot the similarity score distribution from a CSV file and display
     the count of 'very similar' audios based on a given threshold.
@@ -107,25 +133,34 @@ def plot_embed_score_distribution(csv_path, plot_title, similarity_threshold, ou
     plot_title = f"{plot_title} for column {col_num}"
     # Plot the distribution of similarity scores
     plt.figure(figsize=(6, 4))
-    plt.hist(df['similarity_score'], bins=50, alpha=0.75)
+    plt.hist(df["similarity_score"], bins=50, alpha=0.75)
     plt.title(plot_title)
     plt.xlabel(xlabel)
-    plt.ylabel('Frequency')
-    plt.xlim((0,0.0050))
+    plt.ylabel("Frequency")
+    plt.xlim((0, 0.0050))
 
     # Count the number of audios that are very similar
-    very_similar_count = (df['similarity_score'] < similarity_threshold).sum()
+    very_similar_count = (df["similarity_score"] < similarity_threshold).sum()
 
     # Display the count of very similar audios on the plot
-    plt.text(0.95, 0.95, f'Very Similar Samples: {very_similar_count}\nThreshold: {similarity_threshold}',
-             fontsize=9, color='black', transform=plt.gca().transAxes,
-             verticalalignment='top', horizontalalignment='right')
+    plt.text(
+        0.95,
+        0.95,
+        f"Very Similar Samples: {very_similar_count}\nThreshold: {similarity_threshold}",
+        fontsize=9,
+        color="black",
+        transform=plt.gca().transAxes,
+        verticalalignment="top",
+        horizontalalignment="right",
+    )
 
     # Save the plot
-    plt.savefig(output_path, bbox_inches='tight', format='svg')
+    plt.savefig(output_path, bbox_inches="tight", format="svg")
 
     # Show the plot
     plt.show()
 
     # Print the count for logging purposes
-    print(f'Number of audios that are very similar (similarity score < {similarity_threshold}): {very_similar_count}')
+    print(
+        f"Number of audios that are very similar (similarity score < {similarity_threshold}): {very_similar_count}"
+    )

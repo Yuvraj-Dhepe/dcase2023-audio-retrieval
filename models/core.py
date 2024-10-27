@@ -1,32 +1,94 @@
 import torch.nn as nn
+import torch
 import torch.nn.functional as F
 
 from models import audio_encoders, text_encoders
 
+keymap = {
+    # Map for bn0 block
+    "bn0": ["bn0.weight", "bn0.bias", "bn0.running_mean", "bn0.running_var"],
+    # Maps for CNN blocks
+    "conv_block1": [
+        "cnn.0.weight",
+        "cnn.1.weight",
+        "cnn.1.bias",
+        "cnn.3.weight",
+        "cnn.4.weight",
+        "cnn.4.bias",
+    ],
+    "conv_block2": [
+        "cnn.8.weight",
+        "cnn.9.weight",
+        "cnn.9.bias",
+        "cnn.11.weight",
+        "cnn.12.weight",
+        "cnn.12.bias",
+    ],
+    "conv_block3": [
+        "cnn.16.weight",
+        "cnn.17.weight",
+        "cnn.17.bias",
+        "cnn.19.weight",
+        "cnn.20.weight",
+        "cnn.20.bias",
+    ],
+    "conv_block4": [
+        "cnn.24.weight",
+        "cnn.25.weight",
+        "cnn.25.bias",
+        "cnn.27.weight",
+        "cnn.28.weight",
+        "cnn.28.bias",
+    ],
+    "conv_block5": [
+        "cnn.32.weight",
+        "cnn.33.weight",
+        "cnn.33.bias",
+        "cnn.35.weight",
+        "cnn.36.weight",
+        "cnn.36.bias",
+    ],
+    "conv_block6": [
+        "cnn.40.weight",
+        "cnn.41.weight",
+        "cnn.41.bias",
+        "cnn.43.weight",
+        "cnn.44.weight",
+        "cnn.44.bias",
+    ],
+    # Map for fc block
+    "fc_block": ["fc.1.weight", "fc.1.bias"],
+}
+
 
 class DualEncoderModel(nn.Module):
-
     def __init__(self, *args, **kwargs):
         super(DualEncoderModel, self).__init__()
 
         self.out_norm = kwargs.get("out_norm", None)
-        self.audio_enc = getattr(audio_encoders, args[0], None)(**kwargs["audio_enc"])
-        self.text_enc = getattr(text_encoders, args[1], None)(**kwargs["text_enc"])
+        self.audio_enc = getattr(audio_encoders, args[0], None)(
+            **kwargs["audio_enc"]
+        )
+        self.text_enc = getattr(text_encoders, args[1], None)(
+            **kwargs["text_enc"]
+        )
 
         # Load pretrained weights for audio encoder
         if kwargs["audio_enc"]["init"] == "prior":
             self.audio_enc.load_state_dict(kwargs["audio_enc"]["weight"])
 
-            # Freeze or fine-tune pretrained weights
-            if kwargs["audio_enc"]["name"] == "CNN14Encoder":
-                for param in self.audio_enc.bn0.parameters():
-                    param.requires_grad = kwargs["audio_enc"].get("trainable", False)
+            # Get trainable configuration from YAML
+            trainable_config = kwargs["audio_enc"].get("trainable", {})
 
-                for param in self.audio_enc.cnn.parameters():
-                    param.requires_grad = kwargs["audio_enc"].get("trainable", False)
-
-                for param in self.audio_enc.fc.parameters():
-                    param.requires_grad = kwargs["audio_enc"].get("trainable", False)
+            # Set requires_grad based on keymap and trainable_config
+            for name, param in self.audio_enc.named_parameters():
+                # Find block based on global keymap
+                for block, keys in keymap.items():
+                    if name in keys:
+                        param.requires_grad = trainable_config.get(
+                            block, False
+                        )
+                        break  # Stop after finding the block
 
     def audio_branch(self, audio):
         audio_embeds = self.audio_enc(audio)
