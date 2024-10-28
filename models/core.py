@@ -4,9 +4,16 @@ import torch.nn.functional as F
 
 from models import audio_encoders, text_encoders
 
-keymap = {
+bn_keymap = {
     # Map for bn0 block
-    "bn_block": ["bn0.weight", "bn0.bias", "bn0.running_mean", "bn0.running_var"],
+    "bn_block": [
+        "bn0.weight",
+        "bn0.bias",
+        "bn0.running_mean",
+        "bn0.running_var",
+    ],
+}
+conv_keymap = {
     # Maps for CNN blocks
     "conv_block1": [
         "cnn.0.weight",
@@ -56,6 +63,8 @@ keymap = {
         "cnn.44.weight",
         "cnn.44.bias",
     ],
+}
+fc_keymap = {
     # Map for fc block
     "fc_block": ["fc.1.weight", "fc.1.bias"],
 }
@@ -78,17 +87,33 @@ class DualEncoderModel(nn.Module):
             self.audio_enc.load_state_dict(kwargs["audio_enc"]["weight"])
 
             # Get trainable configuration from YAML
-            trainable_config = kwargs["audio_enc"].get("trainable", {})
+            conv_fine_tune_from = kwargs["audio_enc"].get(
+                "conv_fine_tune_from", {}
+            )
 
-            # Set requires_grad based on keymap and trainable_config
+            set_requires_grad = False
             for name, param in self.audio_enc.named_parameters():
-                # Find block based on global keymap
-                for block, keys in keymap.items():
-                    if name in keys:
-                        param.requires_grad = trainable_config.get(
-                            block, False
-                        )
-                        break  # Stop after finding the block
+                # Always fine-tune BatchNorm and fully-connected layers
+                if (
+                    name in bn_keymap["bn_block"]
+                    or name in fc_keymap["fc_block"]
+                ):
+                    param.requires_grad = True
+                    continue
+
+                # Fine-tune specific conv layers starting from `conv_fine_tune_from`
+                for block, keys in conv_keymap.items():
+                    if block == conv_fine_tune_from:
+                        set_requires_grad = True  # Enable training for blocks starting from here
+
+                    if set_requires_grad and name in keys:
+                        param.requires_grad = True
+                        break  # Stop checking conv blocks once match is found
+
+                    # Freeze conv layers before `conv_fine_tune_from`
+                    param.requires_grad = False
+
+                # NOTE: The last fc layer i.e. fc2 from the architecture is a new addition which wasn't used in initializing pretrained weights so it is automatically fine_tuned
 
     def audio_branch(self, audio):
         audio_embeds = self.audio_enc(audio)

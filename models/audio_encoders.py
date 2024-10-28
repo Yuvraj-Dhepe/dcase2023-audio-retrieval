@@ -24,7 +24,7 @@ class CNN14Encoder(nn.Module):
             nn.BatchNorm2d(64),  # 4
             nn.ReLU(),  # 5
             nn.AvgPool2d(kernel_size=2),  # 6
-            nn.Dropout(p=0.2),  # 7
+            nn.Dropout(p=kwargs["conv_dropout"]),  # 7
             # Conv2D block2
             nn.Conv2d(
                 64, 128, kernel_size=3, stride=1, padding=1, bias=False
@@ -37,7 +37,7 @@ class CNN14Encoder(nn.Module):
             nn.BatchNorm2d(128),  # 12
             nn.ReLU(),  # 13
             nn.AvgPool2d(kernel_size=2),  # 14
-            nn.Dropout(p=0.2),  # 15
+            nn.Dropout(p=kwargs["conv_dropout"]),  # 15
             # Conv2D block3
             nn.Conv2d(
                 128, 256, kernel_size=3, stride=1, padding=1, bias=False
@@ -50,7 +50,7 @@ class CNN14Encoder(nn.Module):
             nn.BatchNorm2d(256),  # 20
             nn.ReLU(),  # 21
             nn.AvgPool2d(kernel_size=2),  # 22
-            nn.Dropout(p=0.2),  # 23
+            nn.Dropout(p=kwargs["conv_dropout"]),  # 23
             # Conv2D block4
             nn.Conv2d(
                 256, 512, kernel_size=3, stride=1, padding=1, bias=False
@@ -63,7 +63,7 @@ class CNN14Encoder(nn.Module):
             nn.BatchNorm2d(512),  # 28
             nn.ReLU(),  # 29
             nn.AvgPool2d(kernel_size=2),  # 30
-            nn.Dropout(p=0.2),  # 31
+            nn.Dropout(p=kwargs["conv_dropout"]),  # 31
             # Conv2D block5
             nn.Conv2d(
                 512, 1024, kernel_size=3, stride=1, padding=1, bias=False
@@ -76,7 +76,7 @@ class CNN14Encoder(nn.Module):
             nn.BatchNorm2d(1024),  # 36
             nn.ReLU(),  # 37
             nn.AvgPool2d(kernel_size=2),  # 38
-            nn.Dropout(p=0.2),  # 39
+            nn.Dropout(p=kwargs["conv_dropout"]),  # 39
             # Conv2D block6
             nn.Conv2d(
                 1024, 2048, kernel_size=3, stride=1, padding=1, bias=False
@@ -89,17 +89,17 @@ class CNN14Encoder(nn.Module):
             nn.BatchNorm2d(2048),  # 44
             nn.ReLU(),  # 45
             nn.AvgPool2d(kernel_size=2),  # 46
-            nn.Dropout(p=0.2),  # 47
+            nn.Dropout(p=kwargs["conv_dropout"]),  # 47
         )
 
         self.fc = nn.Sequential(
             nn.Dropout(p=0.5),
-            nn.Linear(2048, 2048, bias=True),
+            nn.Linear(2048, kwargs["fc_units"], bias=True),
             nn.ReLU(),
-            nn.Dropout(p=0.5),
+            nn.Dropout(p=kwargs["fc_dropout"]),
         )
 
-        self.fc2 = nn.Linear(2048, kwargs["out_dim"], bias=True)
+        self.fc2 = nn.Linear(kwargs["fc_units"], kwargs["out_dim"], bias=True)
 
         self.bn0.apply(init_weights)
         self.cnn.apply(init_weights)
@@ -124,7 +124,7 @@ class CNN14Encoder(nn.Module):
         x2 = torch.mean(x, dim=2)  # average over time
         x = x1 + x2  # (N, 2048)
 
-        x = self.fc(x)  # (N, 2048)
+        x = self.fc(x)  # (N, fc_units)
         x = self.fc2(x)  # (N, embed_dim)
 
         return x

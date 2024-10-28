@@ -5,31 +5,27 @@ metric:
   goal: minimize
 
 parameters:
-  lr:
+  AdamOptimizer-args-lr:
     distribution: uniform
     min: 1e-05
     max: 1e-03
 
-  early_stopper:
-    patience: 5
-    min_delta: 0.001
+  DualEncoderModel-audio_enc-fc_dropout:
+    distribution: uniform
+    min: 0.1
+    max: 0.5
 
-  # Individual parameters for each trainable block
-  # bn_block:
-  #   values: [True] # Always beneficial for stability
-  # conv_block1:
-  #   values: [False] # To avoid complexity with limited data
-  # conv_block2:
-  #   values: [False] # To avoid complexity with limited data
-  # conv_block3:
-  #   values: [False] # To avoid complexity with limited data
-  conv_block4:
-    values: [True, False] # Enables additional feature extraction
-  conv_block5:
-    values: [True, False] # Enables additional feature extraction
-  conv_block6:
-    values: [True, False] # Enables additional feature extraction
-  # fc_block:
-  #   values: [True] # Necessary to fine-tune final head for better classification
+  DualEncoderModel-audio_enc-conv_dropout:
+    distribution: uniform
+    min: 0.1
+    max: 0.5
+
+  DualEncoderModel-audio_enc-fc_units:
+    values: [256, 512, 1024, 2048]
+  DualEncoderModel-audio_enc-conv_fine_tune_from:
+    values: ["conv_block4", "conv_block5", "conv_block6"]
+
+  DualEncoderModel-text_enc-fc_units:
+    values: [256, 512, 1024, 2048]
 
 program: main_wandb_new.py

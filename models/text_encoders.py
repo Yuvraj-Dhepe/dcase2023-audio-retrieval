@@ -20,9 +20,9 @@ class SentBERTBaseEncoder(nn.Module):
         for param in self.embedding.parameters():
             param.requires_grad = False
 
-        self.fc1 = nn.Linear(768, 512, bias=True)
+        self.fc1 = nn.Linear(768, kwargs["fc_units"], bias=True)
         self.dropout = nn.Dropout(p=0.2)
-        self.fc2 = nn.Linear(512, kwargs["out_dim"], bias=True)
+        self.fc2 = nn.Linear(kwargs["fc_units"], kwargs["out_dim"], bias=True)
         self.fc1.apply(init_weights)
         self.fc2.apply(init_weights)
 

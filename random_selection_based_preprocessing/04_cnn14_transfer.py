@@ -101,7 +101,9 @@ cnn14_params = torch.load(
 )["model"]
 
 # Transfer pretrained parameters
-cnn14_encoder = audio_encoders.CNN14Encoder(out_dim=300)
+cnn14_encoder = audio_encoders.CNN14Encoder(
+    out_dim=300, conv_dropout=0.2, fc_dropout=0.5, fc_units=2048
+)
 state_dict = cnn14_encoder.state_dict().copy()
 for key in keymap:
     state_dict[key] = cnn14_params[keymap[key]]

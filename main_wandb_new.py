@@ -33,17 +33,20 @@ def train_model(conf, run_id=None):
     else:
         wandb.init(**wandb_conf)
 
+    # print(wandb.config)
+    if wandb.config:
+        for key, value in wandb.config.items():
+            ls = key.split("-")
+            conf[f"{ls[0]}"][f"{ls[1]}"][f"{ls[2]}"] = value
+
+    # print(conf)
     # Load data and parameter configurations, applying sweep overrides if available
     data_conf = conf["data_conf"]
     param_conf = conf["param_conf"]
 
     # Override with wandb.config for hyperparameters during sweeps
-    param_conf["batch_size"] = wandb.config.get(
-        "batch_size", param_conf["batch_size"]
-    )
-    param_conf["num_epoch"] = wandb.config.get(
-        "num_epoch", param_conf["num_epoch"]
-    )
+    param_conf["batch_size"] = param_conf["batch_size"]
+    param_conf["num_epoch"] = param_conf["num_epoch"]
 
     # Initialize and load training and validation data
     train_ds = data_utils.load_data(data_conf["train_data"])
@@ -66,20 +69,6 @@ def train_model(conf, run_id=None):
     # Load initial model params
     model_params = conf[param_conf["model"]]
 
-    # Update trainable blocks based on wandb config
-    if wandb.run:
-        trainable_blocks = model_params["audio_enc"].get("trainable", {})
-        for block in trainable_blocks:
-            trainable_blocks[block] = getattr(
-                wandb.config, block, trainable_blocks[block]
-            )
-    else:
-        # If not in sweep, retain the original configuration
-        trainable_blocks = model_params["audio_enc"].get("trainable", {})
-
-    # Update model_params with the modified trainable_blocks
-    model_params["audio_enc"]["trainable"] = trainable_blocks
-
     # Initialize the model with the updated params
     model = model_utils.init_model(model_params, train_ds.text_vocab)
     # print(model)  # Print the initialized model architecture
@@ -92,10 +81,6 @@ def train_model(conf, run_id=None):
 
     optim_params = conf[param_conf["optimizer"]]
     optimizer_args = optim_params["args"].copy()  # Copy the args dictionary
-
-    # If lr in sweep replace optimizer_args
-    if "lr" in wandb.config:
-        optimizer_args["lr"] = wandb.config.lr
 
     optimizer = getattr(optim, optim_params["name"], None)(
         model.parameters(), **optimizer_args
