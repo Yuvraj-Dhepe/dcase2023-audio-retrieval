@@ -141,7 +141,6 @@ def eval(model, data_loader, criterion):
 
                 audio_embeds, text_embeds = model(audio_batch, text_batch)
                 loss = criterion(audio_embeds, text_embeds, item_batch)
-
                 eval_loss += loss.cpu().numpy()
                 eval_steps += 1
 

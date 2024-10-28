@@ -76,3 +76,33 @@ def score(audio_embed, text_embed, dist):
 
     elif dist == "cosine_similarity":
         return F.cosine_similarity(audio_embed, text_embed, -1, 1e-8)
+
+
+class EarlyStopping:
+    def __init__(self, patience=10, min_delta=0.001):
+        """
+        Args:
+            patience (int): How many epochs to wait before stopping when there's no improvement.
+            min_delta (float): Minimum change to consider as an improvement.
+            path (str): Path to save the model with best performance.
+        """
+        self.patience = patience
+        self.min_delta = min_delta
+        self.counter = 0
+        self.best_loss = None
+        self.early_stop = False
+
+    def __call__(self, val_loss, model):
+        # If best_loss is None, initialize with the first validation loss
+        if self.best_loss is None:
+            self.best_loss = val_loss
+
+        elif val_loss < self.best_loss - self.min_delta:
+            # Improvement found
+            self.best_loss = val_loss
+            self.counter = 0
+        else:
+            # No improvement
+            self.counter += 1
+            if self.counter >= self.patience:
+                self.early_stop = True

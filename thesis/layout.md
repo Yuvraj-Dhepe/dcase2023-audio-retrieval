@@ -25,6 +25,7 @@
         - Model finetuning
     - Dataset Augmentation
     - Model Pipeline: Training to Evaluation
+    # Talking about averaging the loss and stuff.
 
 ### Experiments & Results
 

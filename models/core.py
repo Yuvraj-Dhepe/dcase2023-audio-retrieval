@@ -6,7 +6,7 @@ from models import audio_encoders, text_encoders
 
 keymap = {
     # Map for bn0 block
-    "bn0": ["bn0.weight", "bn0.bias", "bn0.running_mean", "bn0.running_var"],
+    "bn_block": ["bn0.weight", "bn0.bias", "bn0.running_mean", "bn0.running_var"],
     # Maps for CNN blocks
     "conv_block1": [
         "cnn.0.weight",

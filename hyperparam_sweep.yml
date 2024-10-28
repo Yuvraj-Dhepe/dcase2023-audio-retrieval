@@ -1,41 +1,35 @@
-sweep:
-  name: "audio_dl_baseline_sweep"
-  method: bayes
-  metric:
-    name: "val_obj"
-    goal: minimize
+name: "audio_dl_baseline_sweep"
+method: bayes
+metric:
+  name: "val_obj"
+  goal: minimize
 
-  early_terminate:
-    type: hyperband # Early stopping with a HyperBand approach
-    min_iter: 10 # Minimum epochs to run before stopping
-    max_iter: 50 # Maximum epochs
-    s: 2 # Reduction factor for HyperBand stopping criteria
+parameters:
+  lr:
+    distribution: uniform
+    min: 1e-05
+    max: 1e-03
 
-  parameters:
-    lr:
-      distribution: log_uniform
-      min: 0.0001
-      max: 0.01
+  early_stopper:
+    patience: 5
+    min_delta: 0.001
 
-    batch_size:
-      values: [128, 256]
-
-    # Individual parameters for each trainable block
-    bn_block:
-      values: [True] # Always beneficial for stability
-    conv_block1:
-      values: [False] # To avoid complexity with limited data
-    conv_block2:
-      values: [False] # To avoid complexity with limited data
-    conv_block3:
-      values: [False] # To avoid complexity with limited data
-    conv_block4:
-      values: [False] # To avoid complexity with limited data
-    conv_block5:
-      values: [True, False] # Enables additional feature extraction
-    conv_block6:
-      values: [True, False] # Enables additional feature extraction
-    fc_block:
-      values: [True] # Necessary to fine-tune final head for better classification
+  # Individual parameters for each trainable block
+  # bn_block:
+  #   values: [True] # Always beneficial for stability
+  # conv_block1:
+  #   values: [False] # To avoid complexity with limited data
+  # conv_block2:
+  #   values: [False] # To avoid complexity with limited data
+  # conv_block3:
+  #   values: [False] # To avoid complexity with limited data
+  conv_block4:
+    values: [True, False] # Enables additional feature extraction
+  conv_block5:
+    values: [True, False] # Enables additional feature extraction
+  conv_block6:
+    values: [True, False] # Enables additional feature extraction
+  # fc_block:
+  #   values: [True] # Necessary to fine-tune final head for better classification
 
 program: main_wandb_new.py

@@ -23,12 +23,13 @@ data_conf:
         text_level: sentence
 # Configure hyper-parameters
 param_conf:
-    num_epoch: 100
-    batch_size: 256
+    num_epoch: 30
+    batch_size: 2
     model: DualEncoderModel
     criterion: infonce_loss
     optimizer: AdamOptimizer
     lr_scheduler: ReduceLROnPlateau
+    early_stopper: EarlyStopping
 
 # Model definitions
 DualEncoderModel:
@@ -81,6 +82,13 @@ ReduceLROnPlateau:
         threshold_mode: abs
         min_lr: 0.000001
         verbose: true
+
+# Early stopping
+EarlyStopping:
+    name: EarlyStopping
+    args:
+        patience: 5
+        min_delta: 0.001
 
 # Weights & Biases Configuration
 wandb_conf:

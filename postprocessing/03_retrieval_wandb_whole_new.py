@@ -14,7 +14,7 @@ dbm._defaultmod = dumb
 dbm._modules = {"dbm.dumb": dumb}
 
 # Load configuration from conf.yaml
-cap_col_num, run_num = 2, 1
+cap_col_num, run_num = 5, 1
 with open(f"./conf_yamls/exp_{cap_col_num}x_conf.yaml", "rb") as stream:
     conf = yaml.full_load(stream)
 

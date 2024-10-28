@@ -93,17 +93,24 @@ def train_model(conf, run_id=None):
     optim_params = conf[param_conf["optimizer"]]
     optimizer_args = optim_params["args"].copy()  # Copy the args dictionary
 
+    # If lr in sweep replace optimizer_args
     if "lr" in wandb.config:
-        optimizer_args.pop("lr", None)  # Remove 'lr' if it's in the config
+        optimizer_args["lr"] = wandb.config.lr
 
     optimizer = getattr(optim, optim_params["name"], None)(
-        model.parameters(), lr=wandb.config.lr, **optimizer_args
+        model.parameters(), **optimizer_args
     )
 
     lr_params = conf[param_conf["lr_scheduler"]]
     lr_scheduler = getattr(
         optim.lr_scheduler, lr_params["name"], "ReduceLROnPlateau"
     )(optimizer, **lr_params["args"])
+
+    # Early stopping object
+    early_stopping_params = conf[param_conf["early_stopper"]]
+    early_stopping = criterion_utils.EarlyStopping(
+        **early_stopping_params["args"]
+    )
 
     wandb.watch(model)
 
@@ -120,6 +127,8 @@ def train_model(conf, run_id=None):
     max_epoch = param_conf["num_epoch"]
     save_interval = 100  # Save checkpoint every 20 epochs
 
+    best_val_loss = float("inf")
+
     # Perform training
     for epoch in range(start_epoch, max_epoch + 1):
         if epoch > 0:
@@ -128,20 +137,38 @@ def train_model(conf, run_id=None):
                 model, train_dl, objective, optimizer, epoch, max_epoch
             )
 
-        # Perform model evaluation
+        # Perform validation
+        train_loss = model_utils.eval(model, train_dl, objective)
+        val_loss = model_utils.eval(model, val_dl, objective)
+
+        # Log metrics to Weights & Biases
         epoch_results = {
-            "train_obj": model_utils.eval(model, train_dl, objective),
-            "val_obj": model_utils.eval(model, val_dl, objective),
+            "train_obj": train_loss,
+            "val_obj": val_loss,
+            "stop_metric": val_loss,
         }
-
-        # Determine stop metric (e.g., validation loss)
-        epoch_results["stop_metric"] = epoch_results["val_obj"]
-
         # Reduce learning rate w.r.t validation loss
         lr_scheduler.step(epoch_results["stop_metric"])
 
-        # Log metrics to Weights & Biases
-        wandb.log(epoch_results, step=epoch)
+        wandb.log(
+            epoch_results,
+            step=epoch,
+        )
+
+        # Check early stopping
+        early_stopping(val_loss, model)
+        if early_stopping.early_stop:
+            print(f"Early stopping at epoch {epoch}")
+            save_path = os.path.join("./z_ckpts", f"{wandb.run.name}")
+            os.makedirs(save_path, exist_ok=True)
+            torch.save(
+                {
+                    "epoch": epoch,
+                    "model_state_dict": model.state_dict(),
+                    "optimizer_state_dict": optimizer.state_dict(),
+                },
+                os.path.join(save_path, f"checkpoint_epoch_{epoch}"),
+            )
 
         # Save the model checkpoint locally every save_interval epochs and at the end
         if epoch % save_interval == 0 or epoch == max_epoch:
