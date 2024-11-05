@@ -2,48 +2,40 @@ import os
 import shelve
 import numpy as np
 import pandas as pd
+import glob
 from ast import literal_eval
 import yaml
 import wandb
 from tqdm import tqdm
+import click
 
-# Load configuration from conf.yaml
-cap_col_num, run_num = "5x", 1
-with open(f"./conf_yamls/cap_{cap_col_num}_conf.yaml", "rb") as stream:
-    conf = yaml.full_load(stream)
 
-# Extract WandB configuration
-wandb_conf = conf.get("wandb_conf", {})
+def load_config(config_path):
+    """Loads the configuration from a YAML file."""
+    with open(config_path, "rb") as stream:
+        conf = yaml.full_load(stream)
+    return conf
 
-# Get the latest WandB run directory
-api = wandb.Api()
-runs = api.runs(wandb_conf["project"])  # Replace with your actual project name
-latest_run = runs[len(runs) - run_num]
-print(
-    f"\nInitializing Run ID: {latest_run.id} && Run Name: {latest_run.name}\n"
-)
-wandb.init(project=wandb_conf["project"], id=latest_run.id, resume="allow")
 
-# Construct the checkpoint directory path
-ckp_fpath = os.path.join("./z_ckpts", latest_run.id)
+def initialize_wandb_run(conf, run_num=1, run_id=None):
+    """Initializes WandB run based on provided configuration."""
+    wandb_conf = conf.get("wandb_conf", {})
+    api = wandb.Api()
 
-# Extract data configuration
-data_conf = conf["data_conf"]
+    if run_id:
+        run = api.run(f"{wandb_conf['project']}/{run_id}")
+    else:
+        runs = api.runs(wandb_conf["project"])
+        run = runs[len(runs) - run_num]
+
+    print(f"\nInitializing Run ID: {run.id} && Run Name: {run.name}\n")
+    wandb.init(project=wandb_conf["project"], id=run.id, resume="allow")
+    # wandb.init(project=wandb_conf["project"], id=run.id)
+    return run.id
 
 
 def measure_single_item(qid, items, dataset_name, way):
-    """
-    Calculates retrieval metrics (recall@K, mAP@10) for a single query ID.
-
-    Args:
-        qid: Query ID.
-        items: List of tuples (object ID, score, is_relevant) for the query.
-        dataset_name: The name of the dataset being processed.
-        way: The retrieval direction ("Audio2Txt" or "Txt2Audio").
-
-    Returns:
-        dict: Metrics for the single query.
-    """
+    """Calculates retrieval metrics (recall@K, mAP@10) for a single query ID."""
     objects = [i[0] for i in items]  # Extract object IDs
     scores = np.array([i[1] for i in items])  # Extract scores
     targets = np.array([i[2] for i in items])  # Extract relevance labels
@@ -85,17 +77,7 @@ def measure_single_item(qid, items, dataset_name, way):
 
 
 def process_db(db_path, dataset_name, way):
-    """
-    Processes a shelve database and calculates retrieval metrics on the fly.
-
-    Args:
-        db_path: Path to the shelve database.
-        dataset_name: The name of the dataset being processed.
-        way: The retrieval direction ("Audio2Txt" or "Txt2Audio").
-
-    Returns:
-        dict: Average metrics for all queries.
-    """
+    """Processes a shelve database and calculates retrieval metrics."""
     total_R1, total_R5, total_R10, total_mAP = 0.0, 0.0, 0.0, 0.0
     count = 0
 
@@ -137,7 +119,15 @@ def process_db(db_path, dataset_name, way):
     )
 
 
-if __name__ == "__main__":
+def score_retrieval(config_path, run_num=None, run_id=None):
+    """Main function to process datasets and calculate metrics."""
+    conf = load_config(config_path)
+    run_id = initialize_wandb_run(conf, run_num, run_id)
+
+    # Construct the checkpoint directory path
+    ckp_fpath = os.path.join("./z_ckpts", run_id)
+    data_conf = conf["data_conf"]
+
     # Iterate through datasets
     for name in ["val_data", "eval_data"]:
         params = data_conf[name]
@@ -201,4 +191,53 @@ if __name__ == "__main__":
             {f"retrieval_results_{name}": wandb.Table(dataframe=results_df)}
         )  # Log the dataframe as a table
 
+    # NOTE: Emptying the folders removing post processing files except csv files
+    # Specify the folder and extensions
+    extensions = [".dat", ".bak", ".dir"]
+    remove_files_with_extensions(ckp_fpath, extensions)
     wandb.finish()
+
+
+def remove_files_with_extensions(folder_path, extensions):
+    """
+    Removes all files in the specified folder that match the given extensions.
+
+    Args:
+        folder_path (str): The path to the folder.
+        extensions (list): List of file extensions to be removed.
+    """
+    for ext in extensions:
+        # Create a search pattern for each extension
+        search_pattern = os.path.join(folder_path, f"*{ext}")
+        # Use glob to find files matching the pattern
+        for file_path in glob.glob(search_pattern):
+            try:
+                os.remove(file_path)
+                # print(f"Removed: {file_path}")
+            except OSError as e:
+                print(f"Error removing {file_path}: {e}")
+
+
+@click.command()
+@click.option(
+    "--config",
+    required=True,
+    type=click.Path(exists=True),
+    help="Path to the configuration YAML file.",
+)
+@click.option(
+    "--run_num",
+    default=None,
+    type=int,
+    help="Run number to fetch. Ignored if --run-id is provided.",
+)
+@click.option(
+    "--run_id", default=None, type=str, help="Specific Run ID to use."
+)
+def run_script(config, run_num, run_id):
+    """CLI entry point."""
+    score_retrieval(config_path=config, run_num=run_num, run_id=run_id)
+
+
+if __name__ == "__main__":
+    run_script()

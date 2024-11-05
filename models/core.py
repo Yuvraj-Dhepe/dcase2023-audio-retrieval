@@ -4,6 +4,7 @@ import torch.nn.functional as F
 
 from models import audio_encoders, text_encoders
 
+
 bn_keymap = {
     # Map for bn0 block
     "bn_block": [

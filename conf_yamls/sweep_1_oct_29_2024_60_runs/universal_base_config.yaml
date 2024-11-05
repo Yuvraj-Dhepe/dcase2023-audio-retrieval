@@ -39,7 +39,7 @@ DualEncoderModel:
     audio_enc:
         name: CNN14Encoder
         init: prior
-        weight: ./pretrained_models_weights/CNN14_300.pth
+        weight: "./pretrained_models_weights/CNN14_300.pth"
         fc_dropout: 0.5
         conv_dropout: 0.2
         fc_units: 2048
@@ -88,4 +88,4 @@ EarlyStopping:
 
 # Weights & Biases Configuration
 wandb_conf:
-    project: "audio_dl_baseline"
+    project: "dcase2023-audio-retrieval"

@@ -1,4 +1,4 @@
-name: "audio_dl_baseline_sweep"
+name: "HPT_Oct_29"
 method: bayes
 metric:
   name: "val_obj"
@@ -22,10 +22,11 @@ parameters:
 
   DualEncoderModel-audio_enc-fc_units:
     values: [256, 512, 1024, 2048]
+
   DualEncoderModel-audio_enc-conv_fine_tune_from:
     values: ["conv_block4", "conv_block5", "conv_block6"]
 
   DualEncoderModel-text_enc-fc_units:
     values: [256, 512, 1024, 2048]
-
+  
 program: main_wandb_new.py

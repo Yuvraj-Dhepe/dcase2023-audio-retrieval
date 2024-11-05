@@ -20,11 +20,23 @@ class SentBERTBaseEncoder(nn.Module):
         for param in self.embedding.parameters():
             param.requires_grad = False
 
-        self.fc1 = nn.Linear(768, kwargs["fc_units"], bias=True)
-        self.dropout = nn.Dropout(p=0.2)
-        self.fc2 = nn.Linear(kwargs["fc_units"], kwargs["out_dim"], bias=True)
-        self.fc1.apply(init_weights)
-        self.fc2.apply(init_weights)
+        # NOTE: Baseline Original & {num}_x config
+        self.fc = nn.Linear(768, kwargs["out_dim"], bias=True)
+        self.fc.apply(init_weights)
+
+        # NOTE: FineTuning Base
+        # self.fc1 = nn.Linear(768, kwargs["fc_units"], bias=True)
+        # self.dropout = nn.Dropout(p=0.2)
+        # self.fc2 = nn.Linear(kwargs["fc_units"], kwargs["out_dim"], bias=True)
+        # self.fc1.apply(init_weights)
+        # self.fc2.apply(init_weights)
+
+        # NOTE: This is for nothing
+        # self.fc1 = nn.Linear(768, 512, bias=True)
+        # self.dropout = nn.Dropout(p=0.2)
+        # self.fc2 = nn.Linear(512, kwargs["out_dim"], bias=True)
+        # self.fc1.apply(init_weights)
+        # self.fc2.apply(init_weights)
 
     def forward(self, x):
         """
@@ -35,8 +47,13 @@ class SentBERTBaseEncoder(nn.Module):
 
         x = torch.mean(x, dim=1, keepdim=False)
 
-        x = self.fc1(x)
-        x = self.dropout(x)
-        x = self.fc2(x)
+        # Finetuning Base
 
+        # NOTE: Baseline Original & {num}_x config
+        x = self.fc(x)
+
+        # NOTE: Finetuning Base
+        # x = self.fc1(x)
+        # x = self.dropout(x)
+        # x = self.fc2(x)
         return x

@@ -93,18 +93,35 @@ class CNN14Encoder(nn.Module):
         )
 
         self.fc = nn.Sequential(
-            nn.Dropout(p=0.5),
-            nn.Linear(2048, kwargs["fc_units"], bias=True),
+            nn.Dropout(p=kwargs["fc_dropout"]),
+            nn.Linear(2048, 2048, bias=True),
             nn.ReLU(),
             nn.Dropout(p=kwargs["fc_dropout"]),
         )
 
+        # NOTE: Original Baseline & {num}_x config
         self.fc2 = nn.Linear(kwargs["fc_units"], kwargs["out_dim"], bias=True)
 
         self.bn0.apply(init_weights)
         self.cnn.apply(init_weights)
         self.fc.apply(init_weights)
         self.fc2.apply(init_weights)
+
+        # NOTE: Finetuning baseline, using plane Linear
+        # self.fc1 = nn.Sequential(
+        #     nn.Dropout(p=kwargs["fc_dropout"]),
+        #     nn.Linear(2048, kwargs["fc_units"], bias=True),
+        #     nn.ReLU(),
+        #     nn.Dropout(p=kwargs["fc_dropout"]),
+        # )
+
+        # self.fc1 = nn.Linear(2048, kwargs["fc_units"], bias=True)
+        # self.fc2 = nn.Linear(kwargs["fc_units"], kwargs["out_dim"], bias=True)
+        # self.bn0.apply(init_weights)
+        # self.cnn.apply(init_weights)
+        # self.fc.apply(init_weights)
+        # self.fc1.apply(init_weights)
+        # self.fc2.apply(init_weights)
 
     def forward(self, x):
         """
@@ -124,7 +141,13 @@ class CNN14Encoder(nn.Module):
         x2 = torch.mean(x, dim=2)  # average over time
         x = x1 + x2  # (N, 2048)
 
-        x = self.fc(x)  # (N, fc_units)
+        # NOTE: Original Baseline & {num}_x config
+        x = self.fc(x)  # (N, 2048)
         x = self.fc2(x)  # (N, embed_dim)
+
+        # NOTE: Finetuning baseline
+        # x = self.fc(x)  # (N, 2048)
+        # x = self.fc1(x)  # (N,fc_units)
+        # x = self.fc2(x)  # (N, embed_dim)
 
         return x

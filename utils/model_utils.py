@@ -5,6 +5,7 @@ import numpy as np
 import torch
 
 from models import core
+from utils import audio_encoder_layer_map as ael
 
 
 def init_model(params, vocab):
@@ -25,7 +26,18 @@ def init_model(params, vocab):
         params["text_enc"]["weight"] = None
 
     # Audio encoder params
+    # NOTE: As we have hyper parameter tuning, we don't load the weights
     if params["audio_enc"]["init"] == "prior":
+        # Save the weights with the tuned params config
+        ael.transfer_cnn_14_params(
+            weights_path="./pretrained_models_weights/cnn14.pth",
+            output_path=params["audio_enc"]["weight"],
+            layer_name_mapping=ael.cnn14_transfer_layer_mapping(),
+            out_dim=params["audio_enc"]["out_dim"],
+            conv_dropout=params["audio_enc"]["conv_dropout"],
+            fc_dropout=params["audio_enc"]["fc_dropout"],
+            fc_units=params["audio_enc"]["fc_units"],
+        )
         params["audio_enc"]["weight"] = torch.load(
             params["audio_enc"]["weight"], weights_only=True
         )

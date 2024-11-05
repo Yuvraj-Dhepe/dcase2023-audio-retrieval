@@ -1,3 +1,4 @@
+import click
 import yaml
 import os
 import random
@@ -19,7 +20,7 @@ numpy.random.seed(0)
 
 
 # Main training function
-def train_model(conf, run_id=None):
+def train_model(conf, sweep, run_id=None):
     """
     Train the model with specified configurations.
 
@@ -27,17 +28,21 @@ def train_model(conf, run_id=None):
     :param run_id: Optional run ID for resuming a previous run.
     """
     # Initialize Weights & Biases run
-    wandb_conf = conf.get("wandb_conf", {})
-    if run_id:
-        wandb.init(id=run_id, resume="must", **wandb_conf)
-    else:
-        wandb.init(**wandb_conf)
+    if sweep:
+        # NOTE Will default initialize the repo name as the project name
+        wandb.init()
+        print(wandb.config)
+        if wandb.config:
+            for key, value in wandb.config.items():
+                ls = key.split("-")
+                conf[f"{ls[0]}"][f"{ls[1]}"][f"{ls[2]}"] = value
 
-    # print(wandb.config)
-    if wandb.config:
-        for key, value in wandb.config.items():
-            ls = key.split("-")
-            conf[f"{ls[0]}"][f"{ls[1]}"][f"{ls[2]}"] = value
+    else:
+        project_name = conf.get("wandb_conf", {})["project"]
+        if run_id:
+            wandb.init(id=run_id, resume="must", project=project_name)
+        else:
+            wandb.init(project=project_name, config=conf)
 
     # print(conf)
     # Load data and parameter configurations, applying sweep overrides if available
@@ -144,7 +149,7 @@ def train_model(conf, run_id=None):
         early_stopping(val_loss, model)
         if early_stopping.early_stop:
             print(f"Early stopping at epoch {epoch}")
-            save_path = os.path.join("./z_ckpts", f"{wandb.run.name}")
+            save_path = os.path.join("./z_ckpts", f"{wandb.run.id}")
             os.makedirs(save_path, exist_ok=True)
             torch.save(
                 {
@@ -154,12 +159,14 @@ def train_model(conf, run_id=None):
                 },
                 os.path.join(save_path, f"checkpoint_epoch_{epoch}"),
             )
+            break
 
         # Save the model checkpoint locally every save_interval epochs and at the end
         if epoch % save_interval == 0 or epoch == max_epoch:
-            part = wandb.run.dir.split("/wandb/")[1].split("/files")[0]
-            chars, date, run_name = part.split("-")
-            save_path = os.path.join("./z_ckpts", f"{run_name}")
+            # part = wandb.run.dir.split("/wandb/")[1].split("/files")[0]
+            # # Here run name is id, as we are extracting it from the run dirs.
+            # chars, date, run_name = part.split("-")
+            save_path = os.path.join("./z_ckpts", f"{wandb.run.id}")
             os.makedirs(save_path, exist_ok=True)
             torch.save(
                 {
@@ -195,15 +202,49 @@ def train_model(conf, run_id=None):
     wandb.finish()
 
 
-# Main entry point for training
-if __name__ == "__main__":
+def load_config(config_path):
+    """Load the sweep configuration from a YAML file."""
+    with open(config_path, "r") as stream:
+        return yaml.safe_load(stream)
+
+
+@click.command()
+@click.option(
+    "--sweep",
+    required=False,
+    default=False,
+    is_flag=True,
+    help="Run the WandB sweep.",
+)
+def main(sweep):
+    print(sweep)
     # Load the main configuration from the YAML file
     conf_num = 0
-    with open(f"./conf_yamls/cap_{conf_num}_conf.yaml", "rb") as stream:
-        conf = yaml.full_load(stream)
-
+    # normal_conf_path = f"./conf_yamls/cap_{conf_num}_conf.yaml"
+    normal_conf_path = f"conf_yamls/base_configs/cap_0_new_conf.yaml"
+    sweep_conf_path = (
+        f"conf_yamls/sweep_1_oct_29_2024_60_runs/hyperparam_sweep.yaml"
+    )
+    conf = load_config(normal_conf_path)
+    sweep_config = load_config(sweep_conf_path)
     # Check if resuming a previous run
     resume_run_id = conf.get("resume_run_id")
 
-    # Train the model
-    train_model(conf, resume_run_id)
+    if sweep:
+        # If the sweep flag is set, run the WandB sweep
+        sweep_id = wandb.sweep(
+            sweep=sweep_config, project="dcase2023-audio-retrieval"
+        )
+        wandb.agent(
+            sweep_id,
+            function=lambda: train_model(conf, sweep, resume_run_id),
+            count=60,
+        )  # Adjust count as needed
+    else:
+        # Train the model
+        train_model(conf, resume_run_id)
+
+
+if __name__ == "__main__":
+    wandb.login()  # Log in to WandB before starting the sweep
+    main()
