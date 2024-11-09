@@ -29,7 +29,7 @@ def initialize_wandb_run(conf, run_num=1, run_id=None):
         run = runs[len(runs) - run_num]
 
     print(f"\nInitializing Run ID: {run.id} && Run Name: {run.name}\n")
-    wandb.init(project=wandb_conf["project"], id=run.id, resume="allow")
+    wandb.init(project=wandb_conf["project"], id=run.id, resume="must")
     # wandb.init(project=wandb_conf["project"], id=run.id)
     return run.id
 

@@ -1,0 +1,41 @@
+name: "HPT_Nov_09"
+method: bayes
+metric:
+  name: "val_obj"
+  goal: minimize
+
+parameters:
+  AdamOptimizer-args-lr:
+    distribution: uniform
+    min: 1e-05
+    max: 1e-03
+
+  DualEncoderModel-audio_enc-fc_dropout:
+    distribution: uniform
+    min: 0.1
+    max: 0.5
+
+  DualEncoderModel-audio_enc-conv_dropout:
+    distribution: uniform
+    min: 0.1
+    max: 0.5
+
+  DualEncoderModel-audio_enc-fc_units:
+    distribution: int_uniform
+    min: 256
+    max: 2048
+
+  DualEncoderModel-audio_enc-conv_fine_tune_from:
+    values: [1, 2, 3, 4, 5, 6]
+
+  DualEncoderModel-text_enc-fc_units:
+    distribution: int_uniform
+    min: 256
+    max: 2048
+
+  criteria-infonce_loss-args-temperature:
+    distribution: uniform
+    min: 0.03
+    max: 0.1
+
+program: main_wandb_new.py

@@ -43,7 +43,7 @@ DualEncoderModel:
     fc_dropout: 0.5
     conv_dropout: 0.2
     fc_units: 2048
-    conv_fine_tune_from: "conv_block1"
+    conv_fine_tune_from: 1
     out_dim: 300
 
   text_enc:
@@ -83,7 +83,7 @@ ReduceLROnPlateau:
 EarlyStopping:
   name: EarlyStopping
   args:
-    patience: 30
+    patience: 100
     min_delta: 0.001
 
 # Weights & Biases Configuration

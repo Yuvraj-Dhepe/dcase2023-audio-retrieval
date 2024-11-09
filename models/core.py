@@ -16,7 +16,7 @@ bn_keymap = {
 }
 conv_keymap = {
     # Maps for CNN blocks
-    "conv_block1": [
+    1: [
         "cnn.0.weight",
         "cnn.1.weight",
         "cnn.1.bias",
@@ -24,7 +24,7 @@ conv_keymap = {
         "cnn.4.weight",
         "cnn.4.bias",
     ],
-    "conv_block2": [
+    2: [
         "cnn.8.weight",
         "cnn.9.weight",
         "cnn.9.bias",
@@ -32,7 +32,7 @@ conv_keymap = {
         "cnn.12.weight",
         "cnn.12.bias",
     ],
-    "conv_block3": [
+    3: [
         "cnn.16.weight",
         "cnn.17.weight",
         "cnn.17.bias",
@@ -40,7 +40,7 @@ conv_keymap = {
         "cnn.20.weight",
         "cnn.20.bias",
     ],
-    "conv_block4": [
+    4: [
         "cnn.24.weight",
         "cnn.25.weight",
         "cnn.25.bias",
@@ -48,7 +48,7 @@ conv_keymap = {
         "cnn.28.weight",
         "cnn.28.bias",
     ],
-    "conv_block5": [
+    5: [
         "cnn.32.weight",
         "cnn.33.weight",
         "cnn.33.bias",
@@ -56,7 +56,7 @@ conv_keymap = {
         "cnn.36.weight",
         "cnn.36.bias",
     ],
-    "conv_block6": [
+    6: [
         "cnn.40.weight",
         "cnn.41.weight",
         "cnn.41.bias",

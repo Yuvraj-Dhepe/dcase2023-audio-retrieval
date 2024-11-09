@@ -36,7 +36,7 @@ def run_experiment(config_path, run_num=None, run_id=None, params_csv=None):
     # Initialize experiment with run ID or run number
     latest_run = get_latest_run(wandb_conf["project"], run_num, run_id)
     wandb.init(
-        project=wandb_conf["project"], id=run_id, resume="allow", config=conf
+        project=wandb_conf["project"], id=run_id, resume="must", config=conf
     )
     ckp_fpath = os.path.join("./z_ckpts", latest_run.id)
 

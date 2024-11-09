@@ -49,7 +49,7 @@ data_conf:
 # Configure hyper-parameters
 param_conf:
     num_epoch: 100
-    batch_size: 64
+    batch_size: 32
     model: DualEncoderModel
     criterion: infonce_loss
     optimizer: AdamOptimizer

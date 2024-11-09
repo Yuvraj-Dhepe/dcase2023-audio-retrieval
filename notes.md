@@ -106,3 +106,21 @@ If we included all positions (relevant and irrelevant) in the sum, the metric wo
 - Irrelevant items are not included in the precision calculation but do influence precision because they increase the denominator (i.e., the number of retrieved items).
 
 This approach ensures that **AP** reflects the system's ability to retrieve relevant items early in the ranked list.
+
+---
+
+Influence of Temperature on the Loss:
+
+Lower Temperature (< 1):
+
+- Low temperatures make the distribution sharper, causing the model to emphasize differences between high and low similarity scores more strongly.
+- This creates more peaky probabilities, where the model assigns higher confidence to the most similar pairs and lower confidence to others.
+- Pros: This can help the model become more discriminative, ideal for retrieval tasks where clear separation between relevant and non-relevant items is desired.
+- Cons: It can lead to overconfidence, sometimes causing convergence issues or overfitting.
+
+Higher Temperature (> 1):
+
+- Higher temperatures make the distribution smoother, which reduces the emphasis on high-confidence predictions and spreads the probability mass more evenly across all options.
+- This encourages the model to treat the scores more uniformly, reducing confidence for even the most similar pairs.
+- Pros: It can help prevent overconfidence and might stabilize training if the model is overfitting or if gradients are too large.
+- Cons: It may reduce the model's ability to differentiate between similar and dissimilar pairs, which could hurt retrieval performance.

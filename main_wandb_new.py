@@ -14,13 +14,17 @@ import wandb
 from utils import criterion_utils, data_utils, model_utils
 
 # Set random seeds for reproducibility
-torch.manual_seed(0)
-random.seed(0)
-numpy.random.seed(0)
+torch.manual_seed(42)
+random.seed(42)
+numpy.random.seed(42)
+
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+# Leads to no optimization by pytorch but determinism
 
 
 # Main training function
-def train_model(conf, sweep, run_id=None):
+def train_model(conf, sweep, run_id):
     """
     Train the model with specified configurations.
 
@@ -30,28 +34,45 @@ def train_model(conf, sweep, run_id=None):
     # Initialize Weights & Biases run
     if sweep:
         # NOTE Will default initialize the repo name as the project name
-        wandb.init()
-        print(wandb.config)
+        wandb.init(reinit=True)
         if wandb.config:
             for key, value in wandb.config.items():
                 ls = key.split("-")
+                # NOTE: Criteria has a depth of 4, others only 3
+                if ls[0] == "criteria":
+                    conf[f"{ls[0]}"][f"{ls[1]}"][f"{ls[2]}"][
+                        f"{ls[3]}"
+                    ] = value
+                    continue
                 conf[f"{ls[0]}"][f"{ls[1]}"][f"{ls[2]}"] = value
-
     else:
-        project_name = conf.get("wandb_conf", {})["project"]
-        if run_id:
-            wandb.init(id=run_id, resume="must", project=project_name)
-        else:
+        project_name = conf.get("wandb_conf", {}).get("project")
+        try:
+            if run_id:
+                # Attempt to resume with the provided run_id
+                wandb.init(
+                    id=run_id, resume="must", project=project_name, config=conf
+                )
+                # Check if this run already has metrics for all epochs
+                run = wandb.Api().run(f"{project_name}/{run_id}")
+                max_epoch = conf["param_conf"]["num_epoch"]
+                logged_epochs = [row["epoch"] for row in run.history()]
+                if max_epoch in logged_epochs:
+                    print(
+                        f"Run {run_id} is already completed for all epochs. Skipping..."
+                    )
+                    return  # Exit early if the run is fully logged
+            else:
+                # Start a fresh run if no run_id is provided
+                wandb.init(project=project_name, config=conf)
+        except Exception as e:
+            print(f"Error resuming run: {e}. Starting a new run.")
             wandb.init(project=project_name, config=conf)
 
     # print(conf)
     # Load data and parameter configurations, applying sweep overrides if available
     data_conf = conf["data_conf"]
     param_conf = conf["param_conf"]
-
-    # Override with wandb.config for hyperparameters during sweeps
-    param_conf["batch_size"] = param_conf["batch_size"]
-    param_conf["num_epoch"] = param_conf["num_epoch"]
 
     # Initialize and load training and validation data
     train_ds = data_utils.load_data(data_conf["train_data"])
@@ -80,6 +101,7 @@ def train_model(conf, sweep, run_id=None):
 
     # Objective and optimizer initialization
     obj_params = conf["criteria"][param_conf["criterion"]]
+
     objective = getattr(criterion_utils, obj_params["name"], None)(
         **obj_params["args"]
     )
@@ -106,10 +128,12 @@ def train_model(conf, sweep, run_id=None):
 
     # Load model from checkpoint if specified and resuming
     if run_id:
-        checkpoint = torch.load(os.path.join(wandb.run.dir, "checkpoint"))
-        model.load_state_dict(checkpoint["model_state_dict"])
-        optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
-        start_epoch = checkpoint["epoch"]
+        # TODO: Have a better logic here
+        # checkpoint = torch.load(os.path.join(wandb.run.dir, "checkpoint"))
+        # model.load_state_dict(checkpoint["model_state_dict"])
+        # optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        # start_epoch = checkpoint["epoch"]
+        start_epoch = 1
     else:
         start_epoch = 1
 
@@ -139,7 +163,6 @@ def train_model(conf, sweep, run_id=None):
         }
         # Reduce learning rate w.r.t validation loss
         lr_scheduler.step(epoch_results["stop_metric"])
-
         wandb.log(
             epoch_results,
             step=epoch,
@@ -202,49 +225,117 @@ def train_model(conf, sweep, run_id=None):
     wandb.finish()
 
 
+@click.group
+def cli():
+    """CLI for managing model training and WandB sweeps."""
+
+
+@cli.command
+@click.option(
+    "--base_conf_path",
+    required=True,
+    help="Path to the normal configuration YAML file.",
+)
+@click.option(
+    "--sweep_conf_path",
+    required=True,
+    help="Path to the sweep configuration YAML file.",
+)
+@click.option(
+    "--run_count",
+    required=False,
+    default=100,
+    help="Number of sweeps to perform",
+)
+@click.option(
+    "--project_name",
+    default="dcase2023-audio-retrieval",
+    required=False,
+    help="The project under which the sweep should be created",
+)
+def sweep(base_conf_path, sweep_conf_path, run_count, project_name):
+    """Run a new WandB sweep."""
+    base_config = load_config(base_conf_path)
+    sweep_config = load_config(sweep_conf_path)
+
+    sweep_id = wandb.sweep(sweep=sweep_config, project=project_name)
+    wandb.agent(
+        sweep_id,
+        function=lambda: train_model(
+            conf=base_config, sweep=True, run_id=False
+        ),
+        count=run_count,
+    )
+
+
+@cli.command
+@click.option(
+    "--agent_id",
+    required=True,
+    help="Agent ID for resuming a previously run agent in the sweep.",
+)
+@click.option(
+    "--base_conf_path",
+    required=True,
+    help="Path to the normal configuration YAML file.",
+)
+@click.option(
+    "--sweep_conf_path",
+    required=True,
+    help="Path to the sweep configuration YAML file.",
+)
+@click.option(
+    "--run_count",
+    required=False,
+    default=100,
+    help="Number of sweeps to perform",
+)
+@click.option(
+    "--project_name",
+    default="dcase2023-audio-retrieval",
+    required=False,
+    help="The project under which the sweep should be created",
+)
+def agent(agent_id, base_conf_path, sweep_conf_path, run_count, project_name):
+    """Resume a previously run WandB sweep agent."""
+    base_config = load_config(base_conf_path)
+    sweep_config = load_config(sweep_conf_path)
+
+    wandb.agent(
+        agent_id,
+        function=lambda: train_model(
+            conf=base_config, sweep=True, run_id=False
+        ),
+        count=run_count,
+        project=project_name,
+    )
+
+
+@cli.command
+@click.option(
+    "--run_id",
+    required=True,
+    help="Run ID for resuming a previously logged run.",
+)
+@click.option(
+    "--base_conf_path",
+    required=True,
+    help="Path to the normal configuration YAML file.",
+)
+def resume_run(run_id, base_conf_path):
+    """Resume a previously logged WandB run."""
+    base_config = load_config(base_conf_path)
+    train_model(base_config, sweep=False, run_id=run_id)
+
+
 def load_config(config_path):
-    """Load the sweep configuration from a YAML file."""
+    """Load a configuration YAML file."""
+    import yaml
+
     with open(config_path, "r") as stream:
         return yaml.safe_load(stream)
 
 
-@click.command()
-@click.option(
-    "--sweep",
-    required=False,
-    default=False,
-    is_flag=True,
-    help="Run the WandB sweep.",
-)
-def main(sweep):
-    print(sweep)
-    # Load the main configuration from the YAML file
-    conf_num = 0
-    # normal_conf_path = f"./conf_yamls/cap_{conf_num}_conf.yaml"
-    normal_conf_path = f"conf_yamls/base_configs/cap_0_new_conf.yaml"
-    sweep_conf_path = (
-        f"conf_yamls/sweep_1_oct_29_2024_60_runs/hyperparam_sweep.yaml"
-    )
-    conf = load_config(normal_conf_path)
-    sweep_config = load_config(sweep_conf_path)
-    # Check if resuming a previous run
-    resume_run_id = conf.get("resume_run_id")
-
-    if sweep:
-        # If the sweep flag is set, run the WandB sweep
-        sweep_id = wandb.sweep(
-            sweep=sweep_config, project="dcase2023-audio-retrieval"
-        )
-        wandb.agent(
-            sweep_id,
-            function=lambda: train_model(conf, sweep, resume_run_id),
-            count=60,
-        )  # Adjust count as needed
-    else:
-        # Train the model
-        train_model(conf, resume_run_id)
-
-
 if __name__ == "__main__":
-    wandb.login()  # Log in to WandB before starting the sweep
-    main()
+    wandb.login()
+    cli()
