@@ -42,9 +42,9 @@ def extract_top_middle_bottom(df, sort_column):
 @click.option(
     "--config", required=True, help="Path to the configuration YAML file."
 )
-@click.option("--run_id", default=None, help="Single run ID to process.")
+@click.option("--run_id", default=False, help="Single run ID to process.")
 @click.option(
-    "--run_num", type=int, default=None, help="Run number for experiment."
+    "--run_num", type=int, default=False, help="Run number for experiment."
 )
 @click.option(
     "--csv-path",
@@ -91,10 +91,13 @@ def main(config, run_id, csv_path, sort_column, run_num):
         df = pd.read_csv(csv_path)
 
         # Extract the top, middle, and bottom 10 runs based on the sort column
-        top_middle_bottom_runs_df = extract_top_middle_bottom(df, sort_column)
+        # top_middle_bottom_runs_df = extract_top_middle_bottom(df, sort_column)
 
-        extract_path = "z_results/top_middle_bottom_runs.csv"
-        top_middle_bottom_runs_df.to_csv(extract_path, index=False)
+        # extract_path = "z_results/top_middle_bottom_runs_temp.csv"
+        # top_middle_bottom_runs_df.to_csv(extract_path, index=False)
+
+        # NOTE: Use to Running all runs from df.
+        top_middle_bottom_runs_df = df
 
         for _, row in tqdm(
             top_middle_bottom_runs_df.iterrows(),
@@ -108,17 +111,21 @@ def main(config, run_id, csv_path, sort_column, run_num):
 
                 # Run the experiment
                 print("Running experiment...")
-                run_experiment(config_path=config_path, run_id=run_id)
+                run_experiment(
+                    config_path=config,
+                    run_id=run_id,
+                    params_csv=csv_path,
+                )
                 print("Experiment completed.")
 
                 # Process the data
                 print("Processing data...")
-                process_data(config_path=config_path, run_id=run_id)
+                process_data(config_path=config, run_id=run_id)
                 print("Data processing completed.")
 
                 # Score the retrieval
                 print("Scoring retrieval...")
-                score_retrieval(config_path=config_path, run_id=run_id)
+                score_retrieval(config_path=config, run_id=run_id)
                 print("Retrieval scoring completed.")
 
                 print(f"Completed all steps for run ID: {run_id}\n")

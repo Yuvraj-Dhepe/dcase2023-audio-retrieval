@@ -61,7 +61,7 @@ def process_data(config_path, run_id=None, run_num=None):
     data_conf = conf["data_conf"]
 
     # Iterate through datasets
-    for name in ["train_data", "val_data", "eval_data"]:
+    for name in ["val_data", "eval_data"]:
         params = data_conf[name]
         name = name.replace("_data", "")
 

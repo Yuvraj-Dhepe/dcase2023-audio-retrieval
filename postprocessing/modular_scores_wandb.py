@@ -11,6 +11,7 @@ import yaml
 import wandb
 import nltk
 from utils import criterion_utils, data_utils, model_utils
+from torch.utils.data import DataLoader
 
 # Set the default module for dbm to 'dumb'
 dbm._defaultmod = dumb
@@ -46,7 +47,9 @@ def run_experiment(config_path, run_num=None, run_id=None, params_csv=None):
 
     # Load data and model
     data_conf = conf["data_conf"]
-    train_ds, val_ds, eval_ds = load_datasets(data_conf)
+    train_ds, val_ds, eval_ds, eval_obj_ds = load_datasets(
+        data_conf, eval_obj_batch_size=conf["param_conf"]["batch_size"]
+    )
     model = initialize_model(conf, train_ds, ckp_fpath)
 
     # Set device and move model to device
@@ -58,13 +61,51 @@ def run_experiment(config_path, run_num=None, run_id=None, params_csv=None):
     model.eval()
     batch_size = 1024  # Adjust based on GPU memory
 
+    # NOTE To calculate eval_loss objective
+    param_conf = conf["param_conf"]
+    obj_params = conf["criteria"][param_conf["criterion"]]
+
+    objective = getattr(criterion_utils, obj_params["name"], None)(
+        **obj_params["args"]
+    )
     # Iterate through datasets and encode text data
     for name, ds in zip(["val", "eval"], [val_ds, eval_ds]):
         text2vec = encode_text_data(ds, model, device, batch_size)
         compute_and_save_scores(
             name, ds, model, text2vec, device, batch_size, ckp_fpath, conf
         )
+    # NOTE: Log the value eval_obj value to the run
+    eval_obj = get_eval_obj(model, eval_obj_ds, objective)
+    wandb.log({"after_train_eval_obj": eval_obj})
     wandb.finish()
+
+
+def get_eval_obj(model, data_loader, criterion):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    criterion.to(device=device)
+    eval_loss, eval_steps = 0.0, 0
+    with torch.inference_mode():
+        # Wrap the data_loader with tqdm
+        with tqdm(
+            data_loader,
+            unit="batch",
+            desc="Evaluating loss objective for eval set",
+        ) as tepoch:
+            for batch_idx, data in enumerate(tepoch, 0):
+                item_batch, audio_batch, text_batch = data
+
+                audio_batch = audio_batch.to(device)
+                text_batch = text_batch.to(device)
+
+                audio_embeds, text_embeds = model(audio_batch, text_batch)
+                loss = criterion(audio_embeds, text_embeds, item_batch)
+                eval_loss += loss.cpu().numpy()
+                eval_steps += 1
+
+                # Update tqdm progress bar (optional)
+                tepoch.set_postfix(loss=loss.item())
+
+    return eval_loss / max(eval_steps, 1)
 
 
 def load_config(config_path):
@@ -108,7 +149,13 @@ def update_config_from_csv(conf, csv_path, run_id):
                 if "fc_units" in col_parts
                 else row[col].values[0]
             )
+            if "temperature" in col_parts:
+                conf[f"{col_parts[0]}"][f"{col_parts[1]}"][f"{col_parts[2]}"][
+                    f"{col_parts[3]}"
+                ] = value
+                continue
             conf[col_parts[0]][col_parts[1]][col_parts[2]] = value
+
         except KeyError:
             print(
                 f"Warning: '{col}' not found in the configuration structure."
@@ -134,14 +181,21 @@ def get_latest_run(project_name, run_num=None, run_id=None):
     return latest_run
 
 
-def load_datasets(data_conf):
+def load_datasets(data_conf, eval_obj_batch_size=32):
     """
     Load datasets based on the configuration.
     """
     train_ds = data_utils.load_data(data_conf["train_data"], train=False)
     val_ds = data_utils.load_data(data_conf["val_data"], train=False)
     eval_ds = data_utils.load_data(data_conf["eval_data"], train=False)
-    return train_ds, val_ds, eval_ds
+    eval_obj_ds = data_utils.load_data(data_conf["val_data"])
+    eval_obj_ds = DataLoader(
+        dataset=val_ds,
+        batch_size=eval_obj_batch_size,
+        shuffle=True,
+        collate_fn=data_utils.collate_fn,
+    )
+    return train_ds, val_ds, eval_ds, eval_obj_ds
 
 
 def initialize_model(conf, train_ds, ckp_fpath):
@@ -174,44 +228,47 @@ def encode_text_data(ds, model, device, batch_size):
     Encode text data for the specified dataset.
     """
     text2vec = {}
-    for idx in tqdm(
-        range(0, len(ds.text_data), batch_size),
-        desc=f"Encoding text for {ds} dataset",
-    ):
-        batch_data = ds.text_data.iloc[
-            idx : min(idx + batch_size, len(ds.text_data))
-        ]
-        batch_text_vecs = []
-        for item in batch_data.itertuples():
-            if ds.text_level == "word":
-                text_vec = torch.as_tensor(
-                    [
-                        ds.text_vocab(key)
-                        for key in item.tokens
-                        if key not in stopwords
-                    ]
-                )
-                text_vec = model.text_branch(
-                    torch.unsqueeze(text_vec, dim=0).to(device)
-                )[0]
-                batch_text_vecs.append(
-                    torch.unsqueeze(text_vec, dim=0).to(device)
-                )
-            elif ds.text_level == "sentence":
-                text_vec = torch.as_tensor([ds.text_vocab(item.tid)]).to(
-                    device
-                )
-                text_vec = model.text_branch(torch.unsqueeze(text_vec, dim=0))[
-                    0
-                ]
-                batch_text_vecs.append(torch.unsqueeze(text_vec, dim=0))
+    with torch.inference_mode():
+        for idx in tqdm(
+            range(0, len(ds.text_data), batch_size),
+            desc=f"Encoding text for {ds} dataset",
+        ):
+            batch_data = ds.text_data.iloc[
+                idx : min(idx + batch_size, len(ds.text_data))
+            ]
+            batch_text_vecs = []
+            for item in batch_data.itertuples():
+                if ds.text_level == "word":
+                    text_vec = torch.as_tensor(
+                        [
+                            ds.text_vocab(key)
+                            for key in item.tokens
+                            if key not in stopwords
+                        ]
+                    )
+                    text_vec = model.text_branch(
+                        torch.unsqueeze(text_vec, dim=0).to(device)
+                    )[0]
+                    batch_text_vecs.append(
+                        torch.unsqueeze(text_vec, dim=0).to(device)
+                    )
+                elif ds.text_level == "sentence":
+                    text_vec = torch.as_tensor([ds.text_vocab(item.tid)]).to(
+                        device
+                    )
+                    text_vec = model.text_branch(
+                        torch.unsqueeze(text_vec, dim=0)
+                    )[0]
+                    batch_text_vecs.append(torch.unsqueeze(text_vec, dim=0))
 
-        text2vec.update(
-            {
-                item.tid: vec
-                for item, vec in zip(batch_data.itertuples(), batch_text_vecs)
-            }
-        )
+            text2vec.update(
+                {
+                    item.tid: vec
+                    for item, vec in zip(
+                        batch_data.itertuples(), batch_text_vecs
+                    )
+                }
+            )
     return text2vec
 
 
@@ -226,36 +283,37 @@ def compute_and_save_scores(
     score_fpath = os.path.join(ckp_fpath, f"{name}_xmodal_scores.db")
 
     with shelve.open(filename=score_fpath, flag="n", protocol=2) as stream:
-        for fid in tqdm(
-            ds.text_data["fid"].unique(),
-            desc=f"Computing cross-modal scores for {name} dataset",
-        ):
-            group_scores = {}
-            audio_vec = torch.as_tensor(ds.audio_data[fid][()]).to(device)
-            audio_vec = torch.unsqueeze(audio_vec, dim=0)
-            audio_embed = model.audio_branch(audio_vec)[0]
+        with torch.inference_mode():
+            for fid in tqdm(
+                ds.text_data["fid"].unique(),
+                desc=f"Computing cross-modal scores for {name} dataset",
+            ):
+                group_scores = {}
+                audio_vec = torch.as_tensor(ds.audio_data[fid][()]).to(device)
+                audio_vec = torch.unsqueeze(audio_vec, dim=0)
+                audio_embed = model.audio_branch(audio_vec)[0]
 
-            for i in range(0, len(text2vec), batch_size):
-                batch_text_ids = list(text2vec.keys())[
-                    i : min(i + batch_size, len(text2vec))
-                ]
-                batch_text_embeds = torch.stack(
-                    [text2vec[tid] for tid in batch_text_ids]
-                ).to(device)
-                batch_text_embeds = batch_text_embeds.reshape(
-                    -1, batch_text_embeds.shape[-1]
-                )
+                for i in range(0, len(text2vec), batch_size):
+                    batch_text_ids = list(text2vec.keys())[
+                        i : min(i + batch_size, len(text2vec))
+                    ]
+                    batch_text_embeds = torch.stack(
+                        [text2vec[tid] for tid in batch_text_ids]
+                    ).to(device)
+                    batch_text_embeds = batch_text_embeds.reshape(
+                        -1, batch_text_embeds.shape[-1]
+                    )
 
-                xmodal_scores = criterion_utils.score(
-                    audio_embed,
-                    batch_text_embeds,
-                    obj_params["args"].get("dist", "dot_product"),
-                )
+                    xmodal_scores = criterion_utils.score(
+                        audio_embed,
+                        batch_text_embeds,
+                        obj_params["args"].get("dist", "dot_product"),
+                    )
 
-                for j, tid in enumerate(batch_text_ids):
-                    group_scores[tid] = xmodal_scores[j].item()
+                    for j, tid in enumerate(batch_text_ids):
+                        group_scores[tid] = xmodal_scores[j].item()
 
-            stream[fid] = group_scores
+                stream[fid] = group_scores
     print("Save", score_fpath)
 
 

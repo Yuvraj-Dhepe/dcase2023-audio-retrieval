@@ -314,7 +314,8 @@ def agent(agent_id, base_conf_path, sweep_conf_path, run_count, project_name):
 @cli.command
 @click.option(
     "--run_id",
-    required=True,
+    default=None,
+    required=False,
     help="Run ID for resuming a previously logged run.",
 )
 @click.option(
@@ -322,7 +323,7 @@ def agent(agent_id, base_conf_path, sweep_conf_path, run_count, project_name):
     required=True,
     help="Path to the normal configuration YAML file.",
 )
-def resume_run(run_id, base_conf_path):
+def resume_or_new_run(run_id, base_conf_path):
     """Resume a previously logged WandB run."""
     base_config = load_config(base_conf_path)
     train_model(base_config, sweep=False, run_id=run_id)

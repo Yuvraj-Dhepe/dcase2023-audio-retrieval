@@ -88,4 +88,4 @@ EarlyStopping:
 
 # Weights & Biases Configuration
 wandb_conf:
-  project: "audio_dl_baseline"
+  project: "dcase2023-audio-retrieval"
