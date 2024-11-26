@@ -50,6 +50,7 @@ def run_experiment(config_path, run_num=None, run_id=None, params_csv=None):
     train_ds, val_ds, eval_ds, eval_obj_ds = load_datasets(
         data_conf, eval_obj_batch_size=conf["param_conf"]["batch_size"]
     )
+
     model = initialize_model(conf, train_ds, ckp_fpath)
 
     # Set device and move model to device
@@ -61,13 +62,6 @@ def run_experiment(config_path, run_num=None, run_id=None, params_csv=None):
     model.eval()
     batch_size = 1024  # Adjust based on GPU memory
 
-    # NOTE To calculate eval_loss objective
-    param_conf = conf["param_conf"]
-    obj_params = conf["criteria"][param_conf["criterion"]]
-
-    objective = getattr(criterion_utils, obj_params["name"], None)(
-        **obj_params["args"]
-    )
     # Iterate through datasets and encode text data
     for name, ds in zip(["val", "eval"], [val_ds, eval_ds]):
         text2vec = encode_text_data(ds, model, device, batch_size)
@@ -75,6 +69,13 @@ def run_experiment(config_path, run_num=None, run_id=None, params_csv=None):
             name, ds, model, text2vec, device, batch_size, ckp_fpath, conf
         )
     # NOTE: Log the value eval_obj value to the run
+    # NOTE To calculate eval_loss objective
+    param_conf = conf["param_conf"]
+    obj_params = conf["criteria"][param_conf["criterion"]]
+
+    objective = getattr(criterion_utils, obj_params["name"], None)(
+        **obj_params["args"]
+    )
     eval_obj = get_eval_obj(model, eval_obj_ds, objective)
     wandb.log({"after_train_eval_obj": eval_obj})
     wandb.finish()

@@ -11,6 +11,7 @@ from torch.utils.data import DataLoader
 import wandb
 
 # Import utility modules for data and model handling
+from postprocessing import sweep_postprocessing
 from utils import criterion_utils, data_utils, model_utils
 
 # Set random seeds for reproducibility
@@ -185,11 +186,11 @@ def train_model(conf, sweep, run_id):
             break
 
         # Save the model checkpoint locally every save_interval epochs and at the end
+        save_path = os.path.join("./z_ckpts", f"{wandb.run.id}")
         if epoch % save_interval == 0 or epoch == max_epoch:
             # part = wandb.run.dir.split("/wandb/")[1].split("/files")[0]
             # # Here run name is id, as we are extracting it from the run dirs.
             # chars, date, run_name = part.split("-")
-            save_path = os.path.join("./z_ckpts", f"{wandb.run.id}")
             os.makedirs(save_path, exist_ok=True)
             torch.save(
                 {
@@ -221,7 +222,20 @@ def train_model(conf, sweep, run_id):
     # torch.save(model.state_dict(), os.path.join(wandb.run.dir, "final_model_weights.pth"))
     # wandb.save("final_model_weights.pth")
 
-    # Finish the Weights & Biases run
+    # NOTE: Calculate the eval_mAP once after the epochs are finished, only for hpt optimization in sweep
+    if sweep:
+        sweep_postprocessing.postprocess_scores(
+            conf=conf, model_weights_folder=save_path
+        )
+
+        sweep_postprocessing.postprocess_data_split(
+            conf=conf, model_weights_folder=save_path
+        )
+
+        sweep_postprocessing.postprocess_score_retrieval(
+            conf=conf, model_weights_folder=save_path
+        )
+
     wandb.finish()
 
 

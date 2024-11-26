@@ -24,7 +24,7 @@ data_conf:
 
 # Configure hyper-parameters
 param_conf:
-    num_epoch: 30
+    num_epoch: 100
     batch_size: 32
     model: DualEncoderModel
     criterion: infonce_loss
@@ -83,7 +83,7 @@ ReduceLROnPlateau:
 EarlyStopping:
     name: EarlyStopping
     args:
-        patience: 100
+        patience: 10
         min_delta: 0.001
 
 # Weights & Biases Configuration
