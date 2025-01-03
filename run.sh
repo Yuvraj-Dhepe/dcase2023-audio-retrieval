@@ -1,17 +1,18 @@
 #!/bin/bash
 export $(xargs<.env)
-# Execute the first Python file
-echo "Preprocessing 1"
-python preprocess_random_exp/01_agen_clotho_dataset.py
 
-echo "Preprocessing 2"
-python preprocess_random_exp/02_agen_multiprocessing_audio_logmel.py
+# Run the script in sequence
+echo "Running 1x"
+python main_wandb_new.py resume-or-new-run --base_conf_path conf_yamls/base_configs/cap_1x_conf.yaml > 1x.log 2>&1
 
-echo "Preprocessing 3"
-python preprocess_random_exp/03_agen_sbert_embeddings.py
+echo "Running 2x"
+python main_wandb_new.py resume-or-new-run --base_conf_path conf_yamls/base_configs/cap_2x_conf.yaml > 2x.log 2>&1
 
-echo "Preprocessing 4"
-python preprocess_random_exp/04_cnn14_transfer.py
+echo "Running 3x"
+python main_wandb_new.py resume-or-new-run --base_conf_path conf_yamls/base_configs/cap_3x_conf.yaml > 3x.log 2>&1
 
-echo "Training"
-python main_wandb_new.py
+echo "Running 4x"
+python main_wandb_new.py resume-or-new-run --base_conf_path conf_yamls/base_configs/cap_4x_conf.yaml > 4x.log 2>&1
+
+echo "Running 5x"
+python main_wandb_new.py resume-or-new-run --base_conf_path conf_yamls/base_configs/cap_5x_conf.yaml > 5x.log 2>&1
