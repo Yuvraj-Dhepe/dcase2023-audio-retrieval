@@ -6,7 +6,6 @@ from sentence_transformers import SentenceTransformer
 from tqdm import tqdm
 
 global_params = {
-    "dataset_dir": "./data/Clotho_caption_5",
     "audio_splits": ["development", "validation", "evaluation"],
 }
 
@@ -21,7 +20,7 @@ def generate_text_embeddings(output_dir, audio_splits, model):
     Generates text embeddings for captions using a SentenceTransformer model.
 
     Args:
-        dataset_dir (str): Path to the dataset directory.
+        output_dir (str): Path to the dataset directory.
         audio_splits (list): List of audio splits (e.g., "development", "validation").
         model (SentenceTransformer): Pre-trained SentenceTransformer model.
 
@@ -62,12 +61,13 @@ def save_text_embeddings(embed_fpath, text_embeds):
 # Main execution
 if __name__ == "__main__":
     replication_factor = 1  # User-defined value for how many times to pick from synthetic copies (1 to 5)
+    for i in range(5):
+        replication_factor = i + 1
+        output_dir = f"./data/EZexp_{replication_factor}"
+        text_embeddings = generate_text_embeddings(
+            output_dir, global_params["audio_splits"], model
+        )
 
-    output_dir = f"./data/exp_{replication_factor}"
-    text_embeddings = generate_text_embeddings(
-        output_dir, global_params["audio_splits"], model
-    )
-
-    # Save text embeddings
-    embed_fpath = os.path.join(output_dir, f"{model_name}_embeds.pkl")
-    save_text_embeddings(embed_fpath, text_embeddings)
+        # Save text embeddings
+        embed_fpath = os.path.join(output_dir, f"{model_name}_embeds.pkl")
+        save_text_embeddings(embed_fpath, text_embeddings)

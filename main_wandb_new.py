@@ -223,7 +223,7 @@ def train_model(conf, sweep, run_id):
     # wandb.save("final_model_weights.pth")
 
     # NOTE: Calculate the eval_mAP once after the epochs are finished, only for hpt optimization in sweep
-    if sweep:
+    if 1:
         sweep_postprocessing.postprocess_scores(
             conf=conf, model_weights_folder=save_path
         )

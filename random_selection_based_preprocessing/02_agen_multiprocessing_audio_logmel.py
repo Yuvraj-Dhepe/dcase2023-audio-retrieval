@@ -179,20 +179,20 @@ if __name__ == "__main__":
         # List of dataset directories (for both original and synthetic data)
         "dataset_dirs": [
             "./data/Clotho",
-            "./data/Clotho_caption_1",
-            "./data/Clotho_caption_2",
-            "./data/Clotho_caption_3",
-            "./data/Clotho_caption_4",
-            "./data/Clotho_caption_5",
+            "./data/ez_clotho_caption_1",
+            "./data/ez_clotho_caption_2",
+            "./data/ez_clotho_caption_3",
+            "./data/ez_clotho_caption_4",
+            "./data/ez_clotho_caption_5",
         ],
         # Audio splits to process
         "audio_splits": ["development", "validation", "evaluation"],
     }
 
     # Directory to save the output
-    replication_factor = 1  # User-defined value for how many times to pick from synthetic copies (1 to 5)
+    replication_factor = 5  # User-defined value for how many times to pick from synthetic copies (1 to 5)
 
-    output_dir = f"./data/exp_{replication_factor}"
+    output_dir = f"./data/EZexp_{replication_factor}"
 
     # Path to the pickle file containing audio file info
     audio_info_path = os.path.join(output_dir, "audio_info.pkl")

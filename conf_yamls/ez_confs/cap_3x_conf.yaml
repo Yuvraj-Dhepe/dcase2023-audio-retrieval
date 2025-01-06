@@ -2,21 +2,21 @@
 # NOTE: text_data is filled with tid, fid, fname (audio_fname), raw_text (raw_caption), text (smallcase_without_any_punc_marks), tokens (for text field)
 data_conf:
     train_data: # training data
-        dataset: ./data/Clotho_caption_2
+        dataset: ./data/EZexp_3
         audio_data: development_audio_logmels.hdf5
         text_data: development_text.csv
         text_embeds: sbert_embeds.pkl
         text_level: sentence
 
     val_data: # validation data
-        dataset: ./data/Clotho_caption_2
+        dataset: ./data/EZexp_3
         audio_data: validation_audio_logmels.hdf5
         text_data: validation_text.csv
         text_embeds: sbert_embeds.pkl
         text_level: sentence
 
     eval_data: # evaluation data
-        dataset: ./data/Clotho_caption_2
+        dataset: ./data/EZexp_3
         audio_data: evaluation_audio_logmels.hdf5
         text_data: evaluation_text.csv
         text_embeds: sbert_embeds.pkl
@@ -25,34 +25,30 @@ data_conf:
 # Configure hyper-parameters
 param_conf:
     num_epoch: 100
-    batch_size: 256
+    batch_size: 32
     model: DualEncoderModel
     criterion: infonce_loss
     optimizer: AdamOptimizer
     lr_scheduler: ReduceLROnPlateau
+    early_stopper: EarlyStopping
 
 # Model definitions
 DualEncoderModel:
     name: DualEncoderModel
     out_norm: L2
-
     audio_enc:
         name: CNN14Encoder
         init: prior
-        weight: ./pretrained_models_weights/CNN14_300.pth
-        trainable:
-            bn_block: True
-            conv_block1: False
-            conv_block2: False
-            conv_block3: False
-            conv_block4: False
-            conv_block5: True
-            conv_block6: True
-            fc_block: True
+        weight: "./pretrained_models_weights/CNN14_300.pth"
+        fc_dropout: 0.111650527250578
+        conv_dropout: 0.13353659198165377
+        fc_units: 1457
+        conv_fine_tune_from: 4
         out_dim: 300
 
     text_enc:
         name: SentBERTBaseEncoder
+        fc_units: 901
         init: prior
         out_dim: 300
 
@@ -61,14 +57,14 @@ criteria:
     infonce_loss:
         name: LogSoftmaxLoss
         args:
-            temperature: 0.07
+            temperature: 0.08525484428365834
             dist: dot_product # dot_product, cosine_similarity
 
 # Optimizer definitions
 AdamOptimizer:
     name: Adam
     args:
-        lr: 0.001
+        lr: 0.0008146651275669621
         weight_decay: 0.0
 
 # Learning rate scheduler definitions
@@ -83,6 +79,13 @@ ReduceLROnPlateau:
         min_lr: 0.000001
         verbose: true
 
+# Early stopping
+EarlyStopping:
+    name: EarlyStopping
+    args:
+        patience: 10
+        min_delta: 0.001
+
 # Weights & Biases Configuration
 wandb_conf:
-    project: "audio_dl_baseline"
+    project: "best-param-runs"

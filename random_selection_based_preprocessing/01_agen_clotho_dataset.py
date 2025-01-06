@@ -248,11 +248,11 @@ if __name__ == "__main__":
     global_params = {
         "dataset_dirs": [
             "./data/Clotho",
-            "./data/Clotho_caption_1",
-            "./data/Clotho_caption_2",
-            "./data/Clotho_caption_3",
-            "./data/Clotho_caption_4",
-            "./data/Clotho_caption_5",
+            "./data/ez_clotho_caption_1",
+            "./data/ez_clotho_caption_2",
+            "./data/ez_clotho_caption_3",
+            "./data/ez_clotho_caption_4",
+            "./data/ez_clotho_caption_5",
         ],
         "audio_splits": ["development", "validation", "evaluation"],
         "text_files": {
@@ -264,7 +264,7 @@ if __name__ == "__main__":
 
     replication_factor = 5  # User-defined value for how many times to pick from synthetic copies (1 to 5)
 
-    output_dir = f"./data/exp_{replication_factor}"
+    output_dir = f"./data/EZexp_{replication_factor}"
     os.makedirs(output_dir, exist_ok=True)
 
     # Process audio data
