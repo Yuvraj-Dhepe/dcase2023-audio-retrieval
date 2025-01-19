@@ -15,9 +15,9 @@ from postprocessing import sweep_postprocessing
 from utils import criterion_utils, data_utils, model_utils
 
 # Set random seeds for reproducibility
-torch.manual_seed(42)
-random.seed(42)
-numpy.random.seed(42)
+torch.manual_seed(24)
+random.seed(24)
+numpy.random.seed(24)
 
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
