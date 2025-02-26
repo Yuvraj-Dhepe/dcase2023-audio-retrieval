@@ -8,9 +8,6 @@ mkdir -p logs
 # Generate date-time for log filename
 date_time=$(date '+%Y-%m-%d_%H-%M-%S')
 
-# echo "Transfer the model weights"
-# python random_selection_based_preprocessing/04_cnn14_transfer.py
-
 echo "Running split 1"
 python main_wandb_new.py resume-or-new-run --base_conf_path conf_yamls/random_seed_confs_88/cap_1x_conf.yaml > logs/"${date_time}_random_seed_88_split_1.log" 2>&1
 

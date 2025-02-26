@@ -39,7 +39,7 @@ class FileCleaner:
 
 
 def load_model() -> AudioGen:
-    return AudioGen.get_pretrained("facebook/audiogen-medium")
+    return AudioGen.get_pretrained("facebook/audiogen-medium", token = os.getenv("HF_TOKEN"))
 
 
 def set_generation_params(model: AudioGen):

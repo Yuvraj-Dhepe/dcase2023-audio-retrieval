@@ -189,9 +189,37 @@ if __name__ == "__main__":
         "audio_splits": ["development", "validation", "evaluation"],
     }
 
+    # Use for Clotho Dataset logmel processing
+    # global_params = {
+    #     # List of dataset directories (for both original and synthetic data)
+    #     "dataset_dirs": [
+    #         "./data/Clotho",
+    #         "./data/Clotho_caption_1",
+    #         "./data/Clotho_caption_2",
+    #         "./data/Clotho_caption_3",
+    #         "./data/Clotho_caption_4",
+    #         "./data/Clotho_caption_5",
+    #     ],
+    #     # Audio splits to process
+    #     "audio_splits": ["development", "validation", "evaluation"],
+    # }
+
+    # Use for Clotho Original Dataset logmel processing
+    # global_params = {
+    #     # List of dataset directories (for both original and synthetic data)
+    #     "dataset_dirs": [
+    #         "./data/Clotho",
+    #     ],
+    #     # Audio splits to process
+    #     "audio_splits": ["development", "validation", "evaluation"],
+    # }
+
     # Directory to save the output
     replication_factor = 5  # User-defined value for how many times to pick from synthetic copies (1 to 5)
 
+    # Use for clotho dataset
+    # output_dir = f"./data/Clothoexp_{replication_factor}"
+    # output_dir = f"./data/Clotho" For clotho original dataset
     output_dir = f"./data/EZexp_{replication_factor}"
 
     # Path to the pickle file containing audio file info

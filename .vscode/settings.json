@@ -70,4 +70,7 @@
     "peacock.remoteColor": "#42b883",
     "files.autoSave": "afterDelay",
     "files.autoSaveDelay": 300,
+    "codesnap.transparentBackground": true,
+    "codesnap.backgroundColor": "#ffffff",
+    "codesnap.boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px",
 }

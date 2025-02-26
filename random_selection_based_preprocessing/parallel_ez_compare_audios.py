@@ -1,3 +1,4 @@
+import click
 import librosa
 import numpy as np
 import pandas as pd
@@ -11,18 +12,44 @@ from scipy.spatial.distance import euclidean
 import warnings
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from models import audio_encoders
+from utils import audio_encoder_layer_map as ael
+import yaml
 
 
-# Load a base audio PANNS model for comparisons
-# Initiate CNN14 model
-cnn14_encoder = audio_encoders.CNN14Encoder(out_dim=300)
+def load_model(
+    model_conf="./conf_yamls/base_configs/cap_0_conf.yaml",
+    weights_path="./pretrained_models_weights/cnn14.pth",
+):
+    model_params = yaml.safe_load(open(model_conf))["DualEncoderModel"]
+    # Load a base audio PANNS model for comparisons
+    # Initiate CNN14 model
+    ael.transfer_cnn_14_params(
+        weights_path=weights_path,
+        output_path=f"{os.path.dirname(weights_path)}/CNN14_300.pth",
+        layer_name_mapping=ael.cnn14_transfer_layer_mapping(),
+        out_dim=model_params["audio_enc"]["out_dim"],
+        conv_dropout=model_params["audio_enc"]["conv_dropout"],
+        fc_dropout=model_params["audio_enc"]["fc_dropout"],
+        fc_units=model_params["audio_enc"]["fc_units"],
+    )
+    cnn14_encoder = audio_encoders.CNN14Encoder(**model_params["audio_enc"])
 
-# Load pretrained parameters
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-state_dict = torch.load("pretrained_models/CNN14_300.pth", weights_only=True)
-cnn14_encoder.load_state_dict(state_dict)
-cnn14_encoder.to(device)
-cnn14_encoder.eval()
+    # Load a base audio PANNS model for comparisons
+    # Initiate CNN14 model
+
+    # Load pretrained parameters
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    state_dict = torch.load(
+        f"{os.path.dirname(weights_path)}/CNN14_300.pth", weights_only=True
+    )
+    cnn14_encoder.load_state_dict(state_dict)
+    cnn14_encoder.to(device)
+    cnn14_encoder.eval()
+
+    return cnn14_encoder
+
+
+cnn14_encoder = load_model()
 
 
 # Warning utility Function
@@ -139,9 +166,9 @@ def z_normalize_spectrogram(spectrogram, audio_name=""):
 
 
 # Comparison Functions
+# NOTE: Reverse the order of audios for Ez Generated Model as generations are smaller than originals
 def compare_subsequence_dtw(log_mel_orig, log_mel_aug):
     """
-    # https://www.audiolabs-erlangen.de/resources/MIR/FMP/C3/C3S2_DTWbasic.html
     Perform a subsequence DTW comparison between two log-mel spectrograms.
     Compare the entire original spectrogram against subsequences of the
     augmented spectrogram.
@@ -149,12 +176,16 @@ def compare_subsequence_dtw(log_mel_orig, log_mel_aug):
     :param log_mel_aug: Log-mel spectrogram of the augmented audio.
     :return: Average DTW distance between the original and any subsequence of the augmented spectrogram.
     """
+    dummy_var = log_mel_orig
+    log_mel_orig = log_mel_aug
+    log_mel_aug = dummy_var
+
     len_orig = log_mel_orig.shape[1]
     len_aug = log_mel_aug.shape[1]
 
     if len_orig > len_aug:
         raise ValueError(
-            "Original spectrogram is longer than augmented spectrogram. Subsequence DTW cannot be applied."
+            "Augmented spectrogram is longer than original spectrogram. Subsequence DTW cannot be applied."
         )
 
     dtw_distances = []  # Store DTW distances
@@ -191,21 +222,6 @@ def compare_subsequence_dtw(log_mel_orig, log_mel_aug):
     return np.mean(normalized_dtw)  # 0 similar, 1 is dissimilar
 
 
-# The DTW function in librosa is designed to work with multidimensional data, so it computes the alignment between the two sequences by considering the multi-dimensional Euclidean distance between corresponding points in the spectrograms. In this case, each frame (time step) is represented by a feature vector of length n_mels.
-
-# Here's an explanation of how it works:
-
-# Input Format for DTW:
-# log_mel_orig.T: Shape [time, n_mels]
-# log_mel_aug.T: Shape [time, n_mels]
-# DTW Calculation:
-# The DTW algorithm aligns the original and augmented sequences by minimizing the cumulative distance between frames over time. Since your log-mel spectrograms are 2D, it will calculate the Euclidean distance between corresponding feature vectors (rows, in this case) across the time axis.
-
-# The .T in the function ensures the input to librosa.sequence.dtw is in [time, features] format. Each "feature" in this case is a vector of n_mels (the mel frequency bins), so the DTW distance will be computed by comparing feature vectors across time steps.
-
-# Thus, DTW can handle 2D log-mel spectrograms and provide an appropriate alignment distance.
-
-
 def compare_sliding_window_cross_correlation(log_mel_orig, log_mel_aug):
     """
     Compute the Sliding Window Cross-Correlation between two log-mel spectrograms.
@@ -214,9 +230,13 @@ def compare_sliding_window_cross_correlation(log_mel_orig, log_mel_aug):
     :param log_mel_aug: Log-mel spectrogram of the augmented audio.
     :return: Average cross-correlation score.
     """
+    dummy_var = log_mel_orig
+    log_mel_orig = log_mel_aug
+    log_mel_aug = dummy_var
+
     if log_mel_aug.shape[1] < log_mel_orig.shape[1]:
         raise ValueError(
-            "Augmented spectrogram must be at least as long as the original."
+            "Original spectrogram must be at least as long as the Augmented."
         )
 
     corrs = []
@@ -244,10 +264,10 @@ def compare_model_embeddings(log_mel_orig, log_mel_aug):
     orig_audio_vec = torch.unsqueeze(
         torch.as_tensor(log_mel_orig).to("cuda"), dim=0
     )
+
     aug_audio_vec = torch.unsqueeze(
         torch.as_tensor(log_mel_aug).to("cuda"), dim=0
     )
-
     orig_audio_embed = F.normalize(
         cnn14_encoder(orig_audio_vec), p=2.0, dim=-1
     )
@@ -487,85 +507,68 @@ def process_audio_files(
     print(f"Comparison results saved to {output_csv_path}")
 
 
-# Main function
-if __name__ == "__main__":
+@click.command()
+@click.option(
+    "--cap_num", default=None, type=int, help="Caption Column to Process"
+)
+@click.option(
+    "--method",
+    type=click.Choice(["dtw", "wcc", "model"], case_sensitive=False),
+    help="Comparison method to use.",
+)
+def main(cap_num, method):
     original_folder = "./data/Clotho"  # Path to original audio folder
+    fid_file_path = "./data/Clotho/audio_info.pkl"  # Path to fid file
+    input_fn = log_mel_spectrogram  # Function to extract features
 
-    fid_file_path = "data/Clotho/audio_info.pkl"  # Path to fid file
+    augmented_folder = (
+        f"./data/ez_clotho_caption_{cap_num}"  # Path to augmented audio folder
+    )
 
-    # Specify the method to use for processing and comparison
-    input_fn = log_mel_spectrogram  # Function to extract features (log-mel spectrogram)
-    NUM = None  # Set to None to compare all audios or specify a number to limit to the first K audios
+    output_csv_path = f"./temp/ezmodel_original_vs_cap_{cap_num}_generated_audio_via_{method}.csv"
 
-    # List of comparison methods
-    methods = ["model", "dtw", "wcc"]
-    for i in [1, 2, 3, 4, 5]:
-        augmented_folder = (
-            f"./data/Clotho_caption_{i}"  # Path to augmented audio folder
+    if method == "wcc":
+        comparison_fn = compare_sliding_window_cross_correlation
+        process_fid_chunks(
+            original_folder,
+            augmented_folder,
+            fid_file_path,
+            output_csv_path,
+            input_fn,
+            comparison_fn,
+            cap_num,
+            num_chunks=24,
+            method=method,
+            NUM=None,
         )
-        for method in methods:
-            if method == "wcc":
-                comparison_fn = compare_sliding_window_cross_correlation
-            elif method == "dtw":
-                comparison_fn = compare_subsequence_dtw
-            elif method == "model":
-                comparison_fn = compare_model_embeddings
-
-            # Set the output CSV path for each method
-            output_csv_path = (
-                f"./temp/original_vs_cap_{i}_generated_audio_via_{method}.csv"
-            )
-
-            # Run the appropriate processing function based on the method
-            if method == "model":
-                process_audio_files(
-                    original_folder,
-                    augmented_folder,
-                    fid_file_path,
-                    output_csv_path,
-                    input_fn,
-                    comparison_fn,
-                    i,
-                    method=method,
-                    NUM=NUM,
-                )
-            else:
-                process_fid_chunks(
-                    original_folder,
-                    augmented_folder,
-                    fid_file_path,
-                    output_csv_path,
-                    input_fn,
-                    comparison_fn,
-                    i,
-                    num_chunks=24,
-                    method=method,
-                    NUM=NUM,
-                )
+    elif method == "dtw":
+        comparison_fn = compare_subsequence_dtw
+        process_fid_chunks(
+            original_folder,
+            augmented_folder,
+            fid_file_path,
+            output_csv_path,
+            input_fn,
+            comparison_fn,
+            cap_num,
+            num_chunks=24,
+            method=method,
+            NUM=None,
+        )
+    elif method == "model":
+        comparison_fn = compare_model_embeddings
+        process_audio_files(
+            original_folder,
+            augmented_folder,
+            fid_file_path,
+            output_csv_path,
+            input_fn,
+            comparison_fn,
+            cap_num,
+            method=method,
+            NUM=None,
+        )
 
 
-# If the two audios are deemed similar according to the **model embedding function**, whether or not they remain similar according to the **DTW** and **cross-correlation** functions depends on several factors, including:
-
-# ### 1. **Nature of the Comparison**
-# - **Model Embedding Function**: This function captures high-level features of the audio that may not be explicitly related to the time or frequency domain. It assesses the overall similarity based on learned representations, which can often encapsulate semantic or contextual similarities.
-
-# - **DTW and Cross-Correlation**: These methods directly analyze the temporal alignment and correlation of the audio features over time. They may pick up on variations that the model embeddings do not emphasize, especially if those variations are temporal in nature.
-
-# ### 2. **Format and Feature Representation**
-# - **Different Formats**: If the DTW and cross-correlation functions are fed the log-mel spectrograms in the expected format (i.e., **[mel, time]**) and the model embedding function processes them in a different format (i.e., **[time, mel]**), the core features being compared remain the same. However, the way these features are interpreted can differ based on the methodologies.
-
-# ### 3. **Impact of Similarity Measures**
-# - If the model embedding function indicates high similarity:
-#   - It suggests that the learned features are alike, possibly indicating the same audio characteristics, such as timbre or general audio context.
-
-# - However, DTW and cross-correlation might reveal discrepancies in the timing or dynamic content of the audios, which could impact their similarity score. For example, if one audio is a time-stretched version of another, the model embedding might show high similarity, but DTW might indicate a larger distance due to the difference in time alignment.
-
-# ### Conclusion
-# - **Not Guaranteed**: While high similarity from the model embedding function suggests a general likeness, it does not guarantee that DTW and cross-correlation will yield similar results, especially if the audio has differences in temporal characteristics.
-# - **Comprehensive Analysis**: To have a comprehensive understanding, it is advisable to look at the results from all three methods collectively. This approach will provide insights into both the high-level and detailed temporal characteristics of the audios.
-
-### Why Compare Log Mel Spectrogams
-# Direct Match to Model Input: Since you're using log-mel-spectrograms during training, comparing the same feature ensures that the similarity measure is relevant to the model's input.
-# Frequency Representation: Log-mel-spectrograms capture both temporal and spectral information, which is key in understanding how similar the augmentations are to the original data.
-# Computationally Efficient: This method is more efficient than something like DTW for large datasets, as it works with the spectrogram format directly.
-# This method will give you a numerical score that represents the similarity between the original and augmented audio in the feature space your model is using. You can adjust the distance metric or normalization as needed, but Euclidean distance or Cosine similarity on the log-mel-spectrogram is generally effective for such tasks.
+if __name__ == "__main__":
+    main()

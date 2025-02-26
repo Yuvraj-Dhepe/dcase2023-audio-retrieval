@@ -108,12 +108,12 @@ class CNN14Encoder(nn.Module):
         # self.fc2.apply(init_weights)
 
         # NOTE: Finetuning baseline, using plane Linear
-        # self.fc1 = nn.Sequential(
-        #     nn.Dropout(p=kwargs["fc_dropout"]),
-        #     nn.Linear(n*32, kwargs["fc_units"], bias=True),
-        #     nn.ReLU(),
-        #     nn.Dropout(p=kwargs["fc_dropout"]),
-        # )
+        self.fc1 = nn.Sequential(
+            nn.Dropout(p=kwargs["fc_dropout"]),
+            nn.Linear(n * 32, kwargs["fc_units"], bias=True),
+            nn.ReLU(),
+            nn.Dropout(p=kwargs["fc_dropout"]),
+        )
 
         self.fc1 = nn.Linear(n * 32, kwargs["fc_units"], bias=True)
         self.fc2 = nn.Linear(kwargs["fc_units"], kwargs["out_dim"], bias=True)

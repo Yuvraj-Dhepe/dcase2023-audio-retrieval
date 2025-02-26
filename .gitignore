@@ -1,4 +1,8 @@
 # Custom Files
+example/*.jpg
+example/*.png
+example/*.pdf
+example/*.mp3
 data/
 temp/
 wandb/

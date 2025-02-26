@@ -245,6 +245,7 @@ def generate_data_statistics(audio_splits, audio_fid2fname, output_dir):
 
 
 if __name__ == "__main__":
+    # EZ Preprocessing
     global_params = {
         "dataset_dirs": [
             "./data/Clotho",
@@ -261,10 +262,44 @@ if __name__ == "__main__":
             "evaluation": "data/Clotho/evaluation_captions.csv",
         },
     }
+    # For Clotho preprocessing
+    # global_params = {
+    #     "dataset_dirs": [
+    #         "./data/Clotho",
+    #         "./data/Clotho_caption_1",
+    #         "./data/Clotho_caption_2",
+    #         "./data/Clotho_caption_3",
+    #         "./data/Clotho_caption_4",
+    #         "./data/Clotho_caption_5",
+    #     ],
+    #     "audio_splits": ["development", "validation", "evaluation"],
+    #     "text_files": {
+    #         "development": "data/extended_development_captions.csv",
+    #         "validation": "data/Clotho/validation_captions.csv",
+    #         "evaluation": "data/Clotho/evaluation_captions.csv",
+    #     },
+    # }
 
-    replication_factor = 5  # User-defined value for how many times to pick from synthetic copies (1 to 5)
+    # For Clotho original data preprocessing
+    # global_params = {
+    #     "dataset_dirs": [
+    #         "./data/Clotho",
+    #     ],
+    #     "audio_splits": ["development", "validation", "evaluation"],
+    #     "text_files": {
+    #         "development": "data/extended_development_captions.csv",
+    #         "validation": "data/Clotho/validation_captions.csv",
+    #         "evaluation": "data/Clotho/evaluation_captions.csv",
+    #     },
+    # }
+
+    # Modify it from 1 to 5
+    # This value won't matter if we are processing only original data.
+    replication_factor = 5  # User-defined value for how many times to pick from synthetic copies (1 to 5) alongside picking the original audios
 
     output_dir = f"./data/EZexp_{replication_factor}"
+    # output_dir = f"./data/Clothoexp_{replication_factor}" For clotho dataset
+    # output_dir = f"./data/Clotho" For clotho original dataset
     os.makedirs(output_dir, exist_ok=True)
 
     # Process audio data
@@ -272,7 +307,7 @@ if __name__ == "__main__":
         global_params["dataset_dirs"],
         global_params["audio_splits"],
         replication_factor,
-        seed=24,
+        seed=24,  # Modify it to 88, for random_seed_experiment
     )
 
     # Save audio info

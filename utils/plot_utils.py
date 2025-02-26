@@ -23,7 +23,7 @@ def plot_dtw_score_distribution(
     xlabel = " ".join(plot_title.split()[:2])
     plot_title = f"{plot_title} for column {col_num}"
     # Plot the distribution of similarity scores
-    plt.figure(figsize=(6, 4))
+    plt.figure(figsize=(6, 4), dpi=300)
     plt.hist(df["similarity_score"], bins=50, alpha=0.75)
     plt.title(plot_title)
     plt.xlabel(xlabel)
@@ -45,7 +45,7 @@ def plot_dtw_score_distribution(
     )
 
     # Save the plot
-    plt.savefig(output_path, bbox_inches="tight", format="svg")
+    plt.savefig(output_path, bbox_inches="tight", format="png")
 
     # Show the plot
     plt.show()
@@ -72,7 +72,7 @@ def plot_wcc_score_distribution(
     xlabel = " ".join(plot_title.split()[:2])
     plot_title = f"{plot_title} for column {col_num}"
     # Plot the distribution of similarity scores
-    plt.figure(figsize=(6, 4))
+    plt.figure(figsize=(6, 4), dpi=300)
     plt.hist(df["similarity_score"], bins=50, alpha=0.75)
     plt.title(plot_title)
     plt.xlabel(xlabel)
@@ -97,7 +97,7 @@ def plot_wcc_score_distribution(
     )
 
     # Save the plot
-    plt.savefig(output_path, bbox_inches="tight", format="svg")
+    plt.savefig(output_path, bbox_inches="tight", format="png")
 
     # Show the plot
     plt.show()
@@ -132,7 +132,7 @@ def plot_embed_score_distribution(
     xlabel = " ".join(plot_title.split()[:2])
     plot_title = f"{plot_title} for column {col_num}"
     # Plot the distribution of similarity scores
-    plt.figure(figsize=(6, 4))
+    plt.figure(figsize=(6, 4), dpi=300)
     plt.hist(df["similarity_score"], bins=50, alpha=0.75)
     plt.title(plot_title)
     plt.xlabel(xlabel)
@@ -155,7 +155,7 @@ def plot_embed_score_distribution(
     )
 
     # Save the plot
-    plt.savefig(output_path, bbox_inches="tight", format="svg")
+    plt.savefig(output_path, bbox_inches="tight", format="png")
 
     # Show the plot
     plt.show()

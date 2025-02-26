@@ -2,26 +2,25 @@
 # NOTE: text_data is filled with tid, fid, fname (audio_fname), raw_text (raw_caption), text (smallcase_without_any_punc_marks), tokens (for text field)
 data_conf:
     train_data: # training data
-        dataset: ./data/exp_5
+        dataset: ./data/Clothoexp_5
         audio_data: development_audio_logmels.hdf5
         text_data: development_text.csv
         text_embeds: sbert_embeds.pkl
         text_level: sentence
 
     val_data: # validation data
-        dataset: ./data/exp_5
+        dataset: ./data/Clothoexp_5
         audio_data: validation_audio_logmels.hdf5
         text_data: validation_text.csv
         text_embeds: sbert_embeds.pkl
         text_level: sentence
 
     eval_data: # evaluation data
-        dataset: ./data/exp_5
+        dataset: ./data/Clothoexp_5
         audio_data: evaluation_audio_logmels.hdf5
         text_data: evaluation_text.csv
         text_embeds: sbert_embeds.pkl
         text_level: sentence
-
 # Configure hyper-parameters
 param_conf:
     num_epoch: 100

@@ -109,7 +109,7 @@ example
 
 Following captions were cleaned from all the data split caption files
 
-- echos replaced with echoes
+- echos replaced with echoes\
 - removal of double-spaces
 - NOTE: Some captions have words spelled in British English form: for example
   > Gravelled (British) <-> Graveled (American)

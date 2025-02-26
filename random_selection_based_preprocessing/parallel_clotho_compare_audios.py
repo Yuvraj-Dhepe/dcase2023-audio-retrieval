@@ -1,3 +1,4 @@
+import click
 import librosa
 import numpy as np
 import pandas as pd
@@ -11,18 +12,44 @@ from scipy.spatial.distance import euclidean
 import warnings
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from models import audio_encoders
+from utils import audio_encoder_layer_map as ael
+import yaml
 
 
-# Load a base audio PANNS model for comparisons
-# Initiate CNN14 model
-cnn14_encoder = audio_encoders.CNN14Encoder(out_dim=300)
+def load_model(
+    model_conf="./conf_yamls/base_configs/cap_0_conf.yaml",
+    weights_path="./pretrained_models_weights/cnn14.pth",
+):
+    model_params = yaml.safe_load(open(model_conf))["DualEncoderModel"]
+    # Load a base audio PANNS model for comparisons
+    # Initiate CNN14 model
+    ael.transfer_cnn_14_params(
+        weights_path=weights_path,
+        output_path=f"{os.path.dirname(weights_path)}/CNN14_300.pth",
+        layer_name_mapping=ael.cnn14_transfer_layer_mapping(),
+        out_dim=model_params["audio_enc"]["out_dim"],
+        conv_dropout=model_params["audio_enc"]["conv_dropout"],
+        fc_dropout=model_params["audio_enc"]["fc_dropout"],
+        fc_units=model_params["audio_enc"]["fc_units"],
+    )
+    cnn14_encoder = audio_encoders.CNN14Encoder(**model_params["audio_enc"])
 
-# Load pretrained parameters
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-state_dict = torch.load("pretrained_models/CNN14_300.pth", weights_only=True)
-cnn14_encoder.load_state_dict(state_dict)
-cnn14_encoder.to(device)
-cnn14_encoder.eval()
+    # Load a base audio PANNS model for comparisons
+    # Initiate CNN14 model
+
+    # Load pretrained parameters
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    state_dict = torch.load(
+        f"{os.path.dirname(weights_path)}/CNN14_300.pth", weights_only=True
+    )
+    cnn14_encoder.load_state_dict(state_dict)
+    cnn14_encoder.to(device)
+    cnn14_encoder.eval()
+
+    return cnn14_encoder
+
+
+cnn14_encoder = load_model()
 
 
 # Warning utility Function
@@ -244,6 +271,7 @@ def compare_model_embeddings(log_mel_orig, log_mel_aug):
     orig_audio_vec = torch.unsqueeze(
         torch.as_tensor(log_mel_orig).to("cuda"), dim=0
     )
+
     aug_audio_vec = torch.unsqueeze(
         torch.as_tensor(log_mel_aug).to("cuda"), dim=0
     )
@@ -487,61 +515,75 @@ def process_audio_files(
     print(f"Comparison results saved to {output_csv_path}")
 
 
-# Main function
-if __name__ == "__main__":
+@click.command()
+@click.option(
+    "--cap_num", default=None, type=int, help="Caption Column to Process"
+)
+@click.option(
+    "--method",
+    type=click.Choice(["dtw", "wcc", "model"], case_sensitive=False),
+    help="Comparison method to use.",
+)
+def main(cap_num, method):
     original_folder = "./data/Clotho"  # Path to original audio folder
+    fid_file_path = "./data/Clotho/audio_info.pkl"  # Path to fid file
+    input_fn = log_mel_spectrogram  # Function to extract features
 
-    fid_file_path = "data/Clotho/audio_info.pkl"  # Path to fid file
+    augmented_folder = (
+        f"./data/Clotho_caption_{cap_num}"  # Path to augmented audio folder
+    )
 
-    # Specify the method to use for processing and comparison
-    input_fn = log_mel_spectrogram  # Function to extract features (log-mel spectrogram)
-    NUM = None  # Set to None to compare all audios or specify a number to limit to the first K audios
+    output_csv_path = f"./temp/audiogen_original_vs_cap_{cap_num}_generated_audio_via_{method}.csv"
 
-    # List of comparison methods
-    methods = ["model", "dtw", "wcc"]
-    for i in [1, 2, 3, 4, 5]:
-        augmented_folder = (
-            f"./data/Clotho_caption_{i}"  # Path to augmented audio folder
+    if method == "wcc":
+        comparison_fn = compare_sliding_window_cross_correlation
+        process_fid_chunks(
+            original_folder,
+            augmented_folder,
+            fid_file_path,
+            output_csv_path,
+            input_fn,
+            comparison_fn,
+            cap_num,
+            num_chunks=24,
+            method=method,
+            NUM=None,
         )
-        for method in methods:
-            if method == "wcc":
-                comparison_fn = compare_sliding_window_cross_correlation
-            elif method == "dtw":
-                comparison_fn = compare_subsequence_dtw
-            elif method == "model":
-                comparison_fn = compare_model_embeddings
+    elif method == "dtw":
+        comparison_fn = compare_subsequence_dtw
+        process_fid_chunks(
+            original_folder,
+            augmented_folder,
+            fid_file_path,
+            output_csv_path,
+            input_fn,
+            comparison_fn,
+            cap_num,
+            num_chunks=24,
+            method=method,
+            NUM=None,
+        )
+    elif method == "model":
+        comparison_fn = compare_model_embeddings
+        process_audio_files(
+            original_folder,
+            augmented_folder,
+            fid_file_path,
+            output_csv_path,
+            input_fn,
+            comparison_fn,
+            cap_num,
+            method=method,
+            NUM=None,
+        )
 
-            # Set the output CSV path for each method
-            output_csv_path = (
-                f"./temp/original_vs_cap_{i}_generated_audio_via_{method}.csv"
-            )
 
-            # Run the appropriate processing function based on the method
-            if method == "model":
-                process_audio_files(
-                    original_folder,
-                    augmented_folder,
-                    fid_file_path,
-                    output_csv_path,
-                    input_fn,
-                    comparison_fn,
-                    i,
-                    method=method,
-                    NUM=NUM,
-                )
-            else:
-                process_fid_chunks(
-                    original_folder,
-                    augmented_folder,
-                    fid_file_path,
-                    output_csv_path,
-                    input_fn,
-                    comparison_fn,
-                    i,
-                    num_chunks=24,
-                    method=method,
-                    NUM=NUM,
-                )
+if __name__ == "__main__":
+    main()
+
+    # Set the output CSV path for each method
+
+    # Run the appropriate processing function based on the method
 
 
 # If the two audios are deemed similar according to the **model embedding function**, whether or not they remain similar according to the **DTW** and **cross-correlation** functions depends on several factors, including:
